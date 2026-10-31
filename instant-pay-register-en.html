@@ -143,42 +143,77 @@ $('f').addEventListener('submit', async e => {
     return;
   }
   let bad = false;
-  const m = $('mobile').value, p = $('pw').value, c = $('cpw').value;
+  const m = $('mobile').value.trim(), p = $('pw').value, c = $('cpw').value;
   $('mErr').textContent = /^[6-9]\d{9}$/.test(m) ? '' : (bad = true, 'Enter a valid 10-digit mobile number.');
   $('pErr').textContent = p.length >= 6 ? '' : (bad = true, 'Password must be at least 6 characters.');
   $('cErr').textContent = (c && c === p) ? '' : (bad = true, 'Passwords do not match.');
   $('tErr').textContent = $('tc').checked ? '' : (bad = true, 'Please accept the Terms & Conditions to continue.');
   if (bad) return;
-  if (!window.supabaseClient) { $('tErr').textContent='Database is not connected. Please refresh and try again.'; return; }
-  const btn=$('f').querySelector('button[type="submit"]'); btn.disabled=true; btn.textContent='Creating account...';
+  if (!window.supabaseClient) {
+    $('tErr').textContent = 'Database is not connected. Please refresh and try again.';
+    return;
+  }
+
+  const btn = $('f').querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.textContent = 'Creating account...';
   try {
-    // A private synthetic email lets members keep the mobile-number login UI.
-    // Email confirmation must be disabled in Supabase Auth settings for this flow.
-    const email = m + '@members.instantpay.in';
-    const {data,error}=await supabaseClient.auth.signUp({email,password:p,options:{data:{mobile:m,full_name:'Member',invite_code:$('invite').value||null}}});
-    if(error) {
-      const msg = String(error.message || '');
-      if (/already registered|already exists|duplicate|unique/i.test(msg)) throw new Error('Yeh mobile number pehle se registered hai. Is number se dobara account nahi ban sakta.');
-      throw error;
-    }
-    if (data.user) localStorage.setItem(DEVICE_COUNT_KEY, String(deviceRegistrationCount() + 1));
-    if(data.session){
-      const {data:profile,error:pe}=await supabaseClient.from('profiles').select('*').eq('id',data.user.id).maybeSingle();
-      if(pe) throw pe;
-      if(profile){
-        const local={name:profile.full_name||'Member',uid:profile.member_code||data.user.id,mobile:profile.mobile||m,level:'LV0',verified:false,balance:Number(profile.balance||0),registrationReward:Number(profile.registration_bonus||0),registrationRewardClaimed:true,wallet:'',createdAt:Date.now()};
-        localStorage.setItem('instantpay_user',JSON.stringify(local));
-        localStorage.setItem('instantpay_session',JSON.stringify({mobile:m,t:Date.now()}));
+    // Create the Auth user securely on the Edge Function, not with public signUp().
+    const { data: created, error: createError } = await supabaseClient.functions.invoke('mobile-register', {
+      body: { mobile: m, password: p, invite_code: $('invite').value || null }
+    });
+    if (createError) throw createError;
+    if (!created || !created.success) {
+      const msg = created && created.error ? created.error : 'Registration failed. Please try again.';
+      if (/already|registered|exists|duplicate|unique/i.test(msg)) {
+        throw new Error('Yeh mobile number pehle se registered hai. Is number se dobara account nahi ban sakta.');
       }
-      localStorage.removeItem('instantpay_logged_out');
-      $('formBox').style.display='none'; $('ok').style.display='block';
-      setTimeout(()=>location.href='instant-pay-home.html',1200);
-    } else {
-      $('tErr').textContent='Account ban gaya hai, lekin Supabase email confirmation ON hai. Authentication settings mein email confirmation OFF karna hoga; tab mobile aur password se login hoga.';
+      throw new Error(msg);
     }
-  } catch(err) {
-    $('tErr').textContent=err.message||'Registration failed. Please try again.';
-  } finally { btn.disabled=false; btn.textContent='Register'; }
+
+    // Edge Function creates a confirmed account without sending an email.
+    const email = m + '@members.instantpay.in';
+    const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({ email, password: p });
+    if (loginError) {
+      throw new Error('Account ban gaya hai, lekin automatic login nahi hua. Login page par isi mobile aur password se login karein.');
+    }
+
+    localStorage.setItem(DEVICE_COUNT_KEY, String(deviceRegistrationCount() + 1));
+    let profile = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data, error: profileError } = await supabaseClient
+        .from('profiles').select('*').eq('id', loginData.user.id).maybeSingle();
+      if (profileError) throw profileError;
+      if (data) { profile = data; break; }
+      await new Promise(resolve => setTimeout(resolve, 400));
+    }
+
+    if (profile) {
+      const local = {
+        name: profile.full_name || 'Member',
+        uid: profile.member_code || loginData.user.id,
+        mobile: profile.mobile || m,
+        level: 'LV0',
+        verified: false,
+        balance: Number(profile.balance || 0),
+        registrationReward: Number(profile.registration_bonus || 0),
+        registrationRewardClaimed: true,
+        wallet: '',
+        createdAt: Date.now()
+      };
+      localStorage.setItem('instantpay_user', JSON.stringify(local));
+      localStorage.setItem('instantpay_session', JSON.stringify({ mobile: m, t: Date.now() }));
+    }
+    localStorage.removeItem('instantpay_logged_out');
+    $('formBox').style.display = 'none';
+    $('ok').style.display = 'block';
+    setTimeout(() => location.href = 'instant-pay-home.html', 1200);
+  } catch (err) {
+    $('tErr').textContent = err.message || 'Registration failed. Please try again.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Register';
+  }
 });
 </script>
 </body>

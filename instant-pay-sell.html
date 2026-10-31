@@ -213,7 +213,36 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 async function hashPw(p){ try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode((U.uid||'')+':'+p)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join(''); } catch(e) { let h = 0; for (const c of (U.uid||'')+':'+p) h = (h*31 + c.charCodeAt(0)) | 0; return 'f' + h; } }
 function toast(t){ const e = $('ts'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 2000); }
 const memberMatches = o => (String(o.memberUid||'') && String(o.memberUid)===String(U.uid||'')) || (String(o.memberMobile||'') && String(o.memberMobile)===String(U.mobile||''));
-const sells = () => ld('instantpay_orders', []).filter(o => o.type === 'sell' && memberMatches(o));
+let remoteSellOrders = null;
+const localSells = () => ld('instantpay_orders', []).filter(o => o.type === 'sell' && memberMatches(o));
+const sells = () => remoteSellOrders === null ? localSells() : remoteSellOrders;
+function normalizeSellOrder(o){
+  const raw = String(o.status || 'pending').toLowerCase();
+  const status = ['approved','success','confirmed','completed'].includes(raw) ? 'completed' : ['rejected','failed','cancelled','canceled'].includes(raw) ? 'canceled' : 'pending';
+  const local = localSells().find(x => String(x.no||x.order_no||'') === String(o.order_no||o.no||'')) || {};
+  return {...local,...o,no:o.order_no||o.no, type:'sell', amount:Number(o.amount||0), status, time:o.created_at||o.time||local.time||'', memberUid:o.member_id||o.memberUid};
+}
+async function refreshSellOrders(){
+  try {
+    const rows = await InstantPayDB.myOrders();
+    remoteSellOrders = rows.filter(o => String(o.order_type||o.type||'').toLowerCase()==='sell').map(normalizeSellOrder);
+    const profile = await InstantPayDB.myProfile();
+    if (profile) { U.balance = Number(profile.balance||0); localStorage.setItem('instantpay_user',JSON.stringify(U)); }
+  } catch(e) { console.warn('Could not refresh sell orders from Supabase:',e); }
+  render();
+}
+function startSellLiveUpdates(){
+  if (!window.InstantPayDB || !window.InstantPayDB.ready) { window.addEventListener('instantpaydb:ready',startSellLiveUpdates,{once:true}); return; }
+  refreshSellOrders();
+  try { if (window.supabaseClient && !window._ipSellRealtime) {
+    window._ipSellRealtime = window.supabaseClient.channel('instantpay-member-sells')
+      .on('postgres_changes',{event:'*',schema:'public',table:'orders'},payload=>{
+        const changed = payload.new || payload.old || {};
+        if (!changed.member_id || String(changed.member_id)===String(U.uid||'')) refreshSellOrders();
+      }).subscribe();
+  }} catch(e) { console.warn('Sell live updates unavailable:',e); }
+}
+
 let plan = 'profit';
 const MIN = 50, MAX = 200000, MAXMIN = 180;
 
@@ -226,7 +255,8 @@ function render(){
   $('b2').textContent = inr(d.reduce((x, o) => x + Number(o.amount||0), 0));
   $('b3').textContent = inr(p.reduce((x, o) => x + Number(o.amount||0), 0));
   $('cnt').textContent = p.length + '/10';
-  $('list').innerHTML = p.length ? p.map(o => '<div class="ord"><span class="tg">Selling</span><b>' + inr(o.amount) + '</b><br>Order ' + esc(o.no) + '<br>' + esc(o.time) + (o.end ? '<br>Time left: <b>' + left(o.end) + '</b>' : '') + (o.plan ? '<br>' + (o.plan === 'fast' ? 'Fast payment plan' : 'Profit maximization plan') : '') + '</div>').join('') : '<div class="empty">No sell orders in progress.</div>';
+  const cards = [...p.map(o => '<div class="ord"><span class="tg">Selling · Pending</span><b>' + inr(o.amount) + '</b><br>Order ' + esc(o.no||'—') + '<br>' + esc(o.time||'') + (o.end ? '<br>Time left: <b>' + left(o.end) + '</b>' : '') + (o.plan ? '<br>' + (o.plan === 'fast' ? 'Fast payment plan' : 'Profit maximization plan') : '') + '</div>'), ...d.map(o => '<div class="ord"><span class="tg" style="background:#e8f7ee;color:#168447">Success · Completed</span><b>' + inr(o.amount) + '</b><br>Order ' + esc(o.no||'—') + '<br>' + esc(o.time||'') + '</div>')];
+  $('list').innerHTML = cards.length ? cards.join('') : '<div class="empty">No sell orders yet.</div>';
 }
 
 // popup first -> sell page after Confirm
@@ -236,7 +266,7 @@ $('cn').onclick = () => location.href = HOME;
 
 $('ban').onclick = () => location.href = HOME + '#sellrules';
 $('back').onclick = $('close').onclick = () => location.href = HOME;
-$('refresh').onclick = () => { $('refresh').classList.add('sp'); setTimeout(() => $('refresh').classList.remove('sp'), 700); render(); };
+$('refresh').onclick = () => { $('refresh').classList.add('sp'); setTimeout(() => $('refresh').classList.remove('sp'), 700); refreshSellOrders(); };
 
 /* ---- open full Sell screen ---- */
 function sumUpdate(){
@@ -315,11 +345,14 @@ $('ok').onclick = async () => {
   }
   $('am').classList.remove('on');
   closeSell();
-  render();
+  await refreshSellOrders();
   toast('Sell/withdrawal order created');
 };
 render();
-let _last = ''; setInterval(() => { const k = JSON.stringify(sells().map(o => o.no)) + Math.floor(Date.now() / 60000); if (k !== _last) { _last = k; render(); } }, 30000);
+startSellLiveUpdates();
+window.addEventListener('focus', refreshSellOrders);
+window.addEventListener('storage', e => { if (e.key==='instantpay_user' || e.key==='instantpay_orders') refreshSellOrders(); });
+let _last = ''; setInterval(() => { const k = JSON.stringify(sells().map(o => [o.no,o.status])) + Math.floor(Date.now() / 60000); if (k !== _last) { _last = k; refreshSellOrders(); } }, 30000);
 </script>
 </body>
 </html>

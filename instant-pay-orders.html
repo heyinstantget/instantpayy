@@ -97,7 +97,31 @@ let rewards = [];
 async function loadHistory(){
   const user = readObject('instantpay_user');
   const matchesUser = o => ((o.memberUid && String(o.memberUid)===String(user.uid||'')) || (o.memberMobile && String(o.memberMobile)===String(user.mobile||'')));
-  try { const dbOrders=await InstantPayDB.myOrders(); orders=dbOrders.map(o=>({id:o.id,no:o.order_no,type:o.order_type,amount:Number(o.amount),status:o.status,utr:o.utr,time:o.created_at,memberUid:o.member_id})); } catch(e) { orders=readArray('instantpay_orders').filter(matchesUser); }
+  try {
+    const dbOrders = await InstantPayDB.myOrders();
+    orders = dbOrders.map(o => {
+      const rawStatus = String(o.status || 'pending').toLowerCase();
+      const normalizedStatus = ['approved','success','confirmed'].includes(rawStatus) ? 'completed' : ['rejected','failed','cancelled','canceled'].includes(rawStatus) ? 'canceled' : rawStatus;
+      const rawType = String(o.order_type || o.type || 'buy').toLowerCase();
+      return {
+        ...o,
+        id: o.id,
+        no: o.order_no || o.no,
+        type: rawType,
+        amount: Number(o.amount || 0),
+        bonus: Number(o.bonus ?? o.reward ?? o.reward_amount ?? o.rewardAmount ?? 0),
+        reward: Number(o.bonus ?? o.reward ?? o.reward_amount ?? o.rewardAmount ?? 0),
+        status: normalizedStatus,
+        rawStatus,
+        utr: o.utr,
+        time: o.created_at || o.time,
+        memberUid: o.member_id
+      };
+    });
+  } catch(e) {
+    console.warn('Supabase order history unavailable; using this browser history:', e.message);
+    orders = readArray('instantpay_orders').filter(matchesUser);
+  }
   // Accept common reward-history keys without inventing any transactions.
   rewards = [
     ...readArray('instantpay_reward_history'),
@@ -108,15 +132,16 @@ async function loadHistory(){
   if (oneTimeReward && !rewards.some(r => String(r.id||r.no||'') === 'registration-reward')) {
     rewards.unshift({id:'registration-reward', type:'Registration Reward', amount:Number(oneTimeReward), status:'completed', time:user.registeredAt || user.createdAt || '', no:'REGISTRATION-REWARD'});
   }
-  // If order records include a reward/bonus field, surface it as reward history too.
+  // Approved orders carry the bonus saved by the admin approval RPC.
   orders.forEach(o => {
-    const bonus = Number(o.reward ?? o.bonus ?? o.rewardAmount ?? 0);
-    if (bonus > 0 && !rewards.some(r => String(r.orderNo||r.order||r.no||'') === String(o.no||''))) {
-      rewards.push({type:(o.type==='sell'?'Sale Reward':'Buy Reward'), amount:bonus, status:o.status, time:o.time, no:o.no, orderNo:o.no});
+    const bonus = Number(o.bonus ?? o.reward ?? o.rewardAmount ?? 0);
+    const orderRef = String(o.no || o.order_no || o.id || '');
+    if (bonus > 0 && o.status === 'completed' && !rewards.some(r => String(r.orderNo || r.order || r.no || '') === orderRef)) {
+      rewards.push({type:(o.type==='sell'?'Sale Reward':'Buy Reward'), amount:bonus, status:'completed', time:o.time, no:orderRef, orderNo:orderRef});
     }
   });
 }
-const LABEL = {pending:'In progress', completed:'Completed', canceled:'Canceled'};
+const LABEL = {pending:'In progress', completed:'Completed', canceled:'Rejected'};
 const CLS = {pending:'wait', completed:'ok', canceled:'bad'};
 let tab = 'buy';
 
@@ -174,17 +199,41 @@ $('tabs').addEventListener('click', e => {
   document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
   render();
 });
-$('fs').onchange = $('ft').onchange = render;
-$('refresh').onclick = async () => { await loadHistory(); render(); };
+$('fs').onchange = $('ft').onchange = () => { render(); refreshHistory(); };
 $('close').onclick = () => { location.href = 'instant-pay-home.html'; };
 $('list').addEventListener('click', e => {
   const b = e.target.closest('.cp'); if (!b) return;
   if (navigator.clipboard) navigator.clipboard.writeText(b.dataset.no).catch(() => {});
   b.style.color = '#1b8a4b'; setTimeout(() => b.style.color = '', 1200);
 });
-loadHistory();
-render();
-window.addEventListener('storage', e => { if(e.key==='instantpay_orders'||e.key==='instantpay_user'||(e.key||'').includes('reward')) { loadHistory().then(render); } });
+let historyLoading = false;
+async function refreshHistory(){
+  if (historyLoading) { historyRefreshQueued = true; return; }
+  historyLoading = true;
+  $('refresh').disabled = true;
+  $('list').innerHTML = '<div class="empty">Loading your orders…</div>';
+  try { await loadHistory(); render(); }
+  catch (e) { console.error(e); $('list').innerHTML = '<div class="empty">Could not load orders. Please refresh and try again.</div>'; }
+  finally { historyLoading = false; $('refresh').disabled = false; if (historyRefreshQueued) { historyRefreshQueued = false; refreshHistory(); } }
+}
+let historyRefreshQueued = false;
+$('refresh').onclick = refreshHistory;
+// Wait until the shared Supabase helper is available, then load immediately.
+function startOrderHistory(){
+  if (window.InstantPayDB && window.InstantPayDB.ready) {
+    refreshHistory();
+    try {
+      if (window.supabaseClient && !window._ipOrdersRealtime) {
+        window._ipOrdersRealtime = window.supabaseClient.channel('instantpay-member-orders')
+          .on('postgres_changes', {event:'*', schema:'public', table:'orders'}, () => refreshHistory())
+          .subscribe();
+      }
+    } catch(e) { console.warn('Order live updates unavailable:', e); }
+  } else { window.addEventListener('instantpaydb:ready', startOrderHistory, {once:true}); }
+}
+startOrderHistory();
+window.addEventListener('storage', e => { if(e.key==='instantpay_orders'||e.key==='instantpay_user'||(e.key||'').includes('reward')) refreshHistory(); });
+window.addEventListener('focus', refreshHistory);
 </script>
 </body>
 </html>
