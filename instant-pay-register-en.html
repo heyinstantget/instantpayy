@@ -162,7 +162,27 @@ $('f').addEventListener('submit', async e => {
     const { data: created, error: createError } = await supabaseClient.functions.invoke('mobile-register', {
       body: { mobile: m, password: p, invite_code: $('invite').value || null }
     });
-    if (createError) throw createError;
+    // Supabase wraps non-2xx responses in FunctionsHttpError. Read its response body
+    // so the page shows the real server error instead of only 'non-2xx status code'.
+    if (createError) {
+      let detail = createError.message || 'Edge Function request failed.';
+      try {
+        const response = createError.context;
+        if (response && typeof response.clone === 'function') {
+          try {
+            const payload = await response.clone().json();
+            if (payload && (payload.error || payload.message)) detail = payload.error || payload.message;
+            else detail = `Function HTTP ${response.status}: ${detail}`;
+          } catch (_) {
+            detail = `Function HTTP ${response.status}: ${detail}`;
+          }
+        }
+      } catch (_) {}
+      if (/failed to fetch|networkerror|load failed/i.test(detail)) {
+        detail = 'Function tak connection nahi hua. URL, deployment aur internet check karein.';
+      }
+      throw new Error(detail);
+    }
     if (!created || !created.success) {
       const msg = created && created.error ? created.error : 'Registration failed. Please try again.';
       if (/already|registered|exists|duplicate|unique/i.test(msg)) {
