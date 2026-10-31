@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instant Pay - Buy</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#12203a;--muted:#5b6a85;--line:#dde3ef;--brand:#0a5cff;--brand2:#0838a8;--buy:#fff6dc;--buyline:#f2c14e;--yellow:#fbbf0e;--yellow2:#e6a800;--orange:#ff5a1f;--chip:#e9edf5}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Roboto,Arial,sans-serif;display:flex;justify-content:center}
+.app{width:100%;max-width:440px;min-height:100vh;background:var(--bg);padding-bottom:90px;position:relative}
+
+/* header (same style as Instant Pay inner pages) */
+.vh{position:sticky;top:0;z-index:10;background:linear-gradient(180deg,#0f6bff,var(--brand));color:#fff;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:10px 12px;font-weight:700;font-size:18px;letter-spacing:.2px;box-shadow:0 2px 10px rgba(10,92,255,.25)}
+.vh button{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.16);border:0;border-radius:50%;color:#fff;cursor:pointer;padding:0;transition:background .15s}
+.vh button:active{background:rgba(255,255,255,.3)}
+.vh button svg{width:20px;height:20px;display:block}
+.vh #back{justify-self:start}
+.vh .t{text-align:center}
+.vh .acts{justify-self:end;display:flex;gap:8px}
+.vh .sp svg{animation:sp .7s linear}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+.wrap{padding:14px 14px 0}
+.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+
+/* rate */
+.rate{display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+.rate b{color:var(--ink)}
+
+/* tabs */
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px;gap:4px;margin-bottom:12px}
+.tab{position:relative;text-align:center;padding:12px 0;font-size:14px;color:var(--muted);font-weight:700;cursor:pointer;background:none;border:0;border-radius:9px}
+.tab.on{background:var(--brand);color:#fff}
+.tab .bd{position:absolute;top:-9px;right:-2px;background:var(--orange);color:#fff;font-size:10px;font-weight:700;border-radius:6px;padding:2px 5px}
+
+/* tips */
+.tips{background:#fdeee8;border:1px solid #f6c8b6;color:var(--orange);font-size:14px;text-align:center;padding:11px 10px;border-radius:10px;margin-bottom:12px}
+
+/* chips */
+.chips{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;padding:2px 0 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;touch-action:pan-x;overscroll-behavior-x:contain}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:0;background:var(--chip);color:var(--ink);font-size:14px;padding:9px 16px;border-radius:10px;cursor:pointer}
+.chip.on{background:var(--yellow);font-weight:700}
+.more{text-align:center;margin:2px 0 12px}
+.more button{background:none;border:0;color:var(--brand);font-size:14px;font-weight:600;cursor:pointer}
+
+/* offers */
+.offer{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
+.av{flex:0 0 auto;position:relative;width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe27a,var(--yellow) 55%,var(--yellow2));color:#6b4300;font-weight:800;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(251,191,14,.45)}
+.av::before{content:"";position:absolute;inset:3px;border-radius:50%;border:1.5px solid rgba(255,255,255,.55)}
+.mid{flex:1;min-width:0}
+.amt{display:flex;align-items:center;gap:8px;font-size:19px;font-weight:800}
+.tag{background:var(--brand);color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:2px 6px;letter-spacing:.4px}
+.tag.upi{background:#12a05c}.tag.otp{background:#8a3ffc}.tag.usdt{background:#1aa37a}
+.rw{display:inline-flex;align-items:center;gap:4px;background:var(--buy);border:1px solid var(--buyline);color:#a15c00;font-size:13px;font-weight:700;border-radius:6px;padding:2px 8px;margin-top:6px}
+.rw svg{width:15px;height:15px;display:block;flex:none}
+.grab .gi svg{width:20px;height:20px;display:block}
+.gm{width:100%;font-size:20px;font-weight:800;padding:13px 12px;border:1.5px solid var(--line);border-radius:10px;color:var(--ink);outline:none;background:#fff;margin:6px 0 4px}
+.gm:focus{border-color:var(--brand)}
+.gq{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px}
+.gq button{border:0;background:var(--chip);color:var(--ink);font-size:13px;font-weight:600;padding:8px 13px;border-radius:9px;cursor:pointer}
+.gq button:active{background:var(--yellow)}
+.ur{font-size:12px;color:var(--muted);margin-top:3px;font-weight:600}.ur b{color:var(--ink)}
+.ic{display:flex;gap:4px;margin-top:7px}
+.ic{flex-wrap:wrap}
+.ic .bn{font-size:10px;font-weight:700;color:var(--muted);background:var(--chip);border-radius:4px;padding:2px 6px}
+.ic .bl{width:20px;height:20px;border-radius:4px;object-fit:contain;display:block}
+.buy{flex:0 0 auto;width:84px;border:0;background:var(--yellow);color:#1a1300;font-weight:800;font-size:15px;padding:11px 0;border-radius:20px;cursor:pointer}
+.buy:active{background:var(--yellow2)}
+.offer.mv{animation:mv .3s ease both}
+@keyframes mv{from{opacity:0;transform:translateY(var(--dy,14px))}to{opacity:1;transform:none}}
+.dep h3{margin:0 0 4px;font-size:17px}
+.dep p{margin:0 0 12px;font-size:13px;color:var(--muted)}
+.dep label{display:block;font-size:13px;color:var(--muted);margin:10px 0 6px}
+.dep input{width:100%;font-size:18px;font-weight:700;padding:12px;border:1.5px solid var(--line);border-radius:10px;color:var(--ink);outline:none;background:#fff}
+.dep input:focus{border-color:var(--brand)}
+.nets{display:flex;gap:8px}
+.net{flex:1;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-weight:700;font-size:14px;padding:10px 0;border-radius:10px;cursor:pointer}
+.net.on{border-color:var(--brand);background:#eaf1ff;color:var(--brand)}
+.dep .sum{margin-top:12px;background:var(--bg);border-radius:10px;padding:4px 12px}
+.dep .sb{margin-top:14px}
+.empty{text-align:center;color:var(--muted);padding:30px 10px;font-size:14px}
+
+/* one-click grab */
+.grab{position:fixed;bottom:20px;right:max(12px,calc(50% - 208px));display:flex;align-items:center;gap:10px;background:var(--yellow);border:0;border-radius:30px;padding:8px 18px 8px 8px;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.22);text-align:left;z-index:20}
+.grab .gi{width:34px;height:34px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:18px}
+.grab b{display:block;font-size:14px;color:#1a1300}
+.grab small{font-size:11px;color:#3a2a00}
+
+
+/* confirm sheet */
+.mask{position:fixed;inset:0;background:rgba(10,20,40,.5);display:none;z-index:40;justify-content:center;align-items:flex-end}
+.mask.open{display:flex}
+.sheet{width:100%;max-width:440px;background:var(--card);border-radius:18px 18px 0 0;padding:18px 16px 22px}
+.sheet h3{margin:0 0 10px;font-size:18px}
+.r2{display:flex;justify-content:space-between;font-size:14px;padding:9px 0;border-bottom:1px solid var(--line)}
+.sb{display:block;width:100%;margin-top:12px;padding:13px;font-size:16px;font-weight:700;border:0;border-radius:9px;cursor:pointer}
+.sb.go{background:var(--brand);color:#fff}
+.sb.no{background:transparent;color:var(--brand);border:1.5px solid var(--brand)}
+.sn{font-size:13px;margin-top:10px;min-height:18px;text-align:center}
+.pay-sheet{max-height:92vh;overflow:auto}
+.pay-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.pay-head h3{margin:0 0 4px}
+.gateway{font-size:12px;color:var(--muted)}
+.demo-warning{margin:12px 0;background:#fff4df;border:1px solid #f2d49a;border-radius:8px;padding:9px 10px;color:#714900;font-size:12px;line-height:1.4}
+.pay-amount{text-align:center;font-size:28px;font-weight:800;margin:12px 0 2px}
+.pay-expiry{text-align:center;color:#b54708;font-size:13px;font-weight:700}
+.qr-wrap{width:190px;height:190px;margin:14px auto 10px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff;display:grid;place-items:center}
+.qr-wrap img{display:block;width:100%;height:100%;object-fit:contain}
+.payee{text-align:center;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.utr-label{display:block;margin:14px 0 6px;font-size:13px;font-weight:700}
+.utr-input{width:100%;font-size:18px;letter-spacing:1px;padding:12px;border:1.5px solid var(--line);border-radius:9px;outline:none}
+.utr-input:focus{border-color:var(--brand)}
+.pay-note{min-height:18px;margin-top:8px;text-align:center;font-size:13px;color:var(--muted)}
+.payment-page{display:none;min-height:100vh}
+body.checkout-open{display:block}
+body.checkout-open>.app{display:none}
+.pay-content{padding:14px 14px 28px}
+.pay-content .box{max-width:440px;margin:0 auto}
+.pay-content .pay-amount{margin-top:8px}
+.pay-content .pay-expiry{margin-bottom:4px}
+.pay-content .qr-wrap{width:210px;height:210px}
+.pay-content .sb{max-width:440px;margin-left:auto;margin-right:auto}
+.pay-content .utr-input,.pay-content .pay-note{max-width:440px;display:block;margin-left:auto;margin-right:auto}
+#pending-orders-box{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="vh">
+    <button type="button" id="back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <span class="t">Buy</span>
+    <div class="acts">
+      <button type="button" id="refresh" aria-label="Refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 10-2.3 6.1"/><path d="M20 4v7h-7"/></svg></button>
+      <button type="button" id="close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="box rate"><span>1 INR = 1 Instant Pay</span><b id="rt">1U = 97.00 INR</b></div>
+
+    <div class="box" id="pending-orders-box" style="display:none">
+      <h3 style="margin:0 0 10px;font-size:17px">My Pending Orders</h3>
+      <div id="pending-orders-list"></div>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <button class="tab" data-t="UPI">UPI<span class="bd">+3%</span></button>
+      <button class="tab" data-t="OTP-UPI">OTP-UPI<span class="bd">+9%</span></button>
+      <button class="tab on" data-t="BANK">BANK<span class="bd">+9.1%</span></button>
+      <button class="tab" data-t="USDT">USDT<span class="bd">+16%</span></button>
+    </div>
+
+    <div class="tips">Tips: Requires KYC connection to purchase.</div>
+
+    <div class="chips" id="chips"></div>
+    <div class="more"><button type="button" id="more">Show all ranges ▾</button></div>
+
+    <div id="list"></div>
+
+    <div id="dep" class="box dep" style="display:none">
+      <h3>USDT Deposit</h3>
+      <p>Type your USDT amount and deposit. Minimum 10 USDT.</p>
+      <label>Network</label>
+      <div class="nets" id="nets">
+        <button type="button" class="net on" data-n="TRC20">TRC20</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">Important: this is a 0x address. Confirm the exact supported network with your wallet/provider before sending; do not send on TRC20 unless the recipient confirms support.</div>
+      <div id="usdt-deposit-details" style="display:none">
+        <div class="qr-wrap"><img id="usdt-deposit-qr" alt="QR code for USDT wallet address"></div>
+        <div class="payee" style="overflow-wrap:anywhere">USDT address: <b id="usdt-deposit-address"></b></div>
+        <button class="sb no" id="copy-usdt-address" type="button">Copy Address</button>
+        <div class="pay-expiry" style="margin-top:8px">Time remaining: <span id="usdt-deposit-timer">15:00</span></div>
+        <label for="usdt-tx-ref" style="display:block;font-size:13px;color:var(--muted);margin:14px 0 6px">Transaction hash / payment reference</label>
+        <input id="usdt-tx-ref" type="text" autocomplete="off" placeholder="Paste transaction hash or reference" style="width:100%;font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:9px">
+        <button class="sb go" id="usdt-submit-ref" type="button">Submit Payment Reference</button>
+        <button class="sb no" id="usdt-cancel-deposit" type="button">Cancel Deposit</button>
+        <div class="sn" id="usdt-ref-note" aria-live="polite"></div>
+      </div>
+      <label for="d-amt">Amount (USDT)</label>
+      <input id="d-amt" type="number" inputmode="decimal" min="10" step="any" placeholder="Minimum 10 USDT">
+      <div class="sum">
+        <div class="r2"><span>Rate</span><b id="d-rate"></b></div>
+        <div class="r2"><span>INR value</span><b id="d-inr">₹0</b></div>
+        <div class="r2" style="border:0"><span>Reward (16%)</span><b id="d-rw" style="color:var(--orange)">+0</b></div>
+      </div>
+      <button class="sb go" id="d-go" type="button">Deposit USDT</button>
+      <div class="sn" id="d-note"></div>
+    </div>
+  </div>
+</div>
+
+<button class="grab" id="grab" type="button">
+  <span class="gi"><svg viewBox="0 0 24 24" fill="#f59e0b" stroke="#b26a00" stroke-width="1.5" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></span>
+  <span><b>One-click Grab</b><small id="gr">Buy ₹100 – ₹50,000</small></span>
+</button>
+
+
+<div class="mask" id="gmask">
+  <div class="sheet">
+    <h3>One-click Grab</h3>
+    <div style="font-size:13px;color:var(--muted)">Enter any amount from ₹100 to ₹50,000 &middot; <b id="g-met"></b></div>
+    <input class="gm" id="g-amt" type="number" inputmode="numeric" min="100" max="50000" step="1" placeholder="Enter amount (₹)">
+    <div class="gq" id="g-q"></div>
+    <div class="r2" style="border:0;margin-top:6px"><span>Reward</span><b id="g-rw" style="color:var(--orange)">+0</b></div>
+    <div class="sn" id="g-note" style="color:#d93025;margin-top:0"></div>
+    <button class="sb go" id="g-ok" type="button">Continue</button>
+    <button class="sb no" id="g-cancel" type="button">Cancel</button>
+  </div>
+</div>
+
+<div class="mask" id="mask">
+  <div class="sheet">
+    <h3>Confirm Buy</h3>
+    <div class="r2"><span>Amount</span><b id="s-amt"></b></div>
+    <div class="r2"><span>Method</span><b id="s-met"></b></div>
+    <div class="r2"><span>Rate</span><b id="s-rate"></b></div>
+    <div class="r2"><span>You will get (approx.)</span><b id="s-usdt"></b></div>
+    <div class="r2" style="border:0"><span>Reward</span><b id="s-rw" style="color:var(--orange)"></b></div>
+    <button class="sb go" id="s-ok" type="button">Confirm order</button>
+    <button class="sb no" id="s-cancel" type="button">Cancel</button>
+    <div class="sn" id="s-note"></div>
+  </div>
+</div>
+
+<section class="payment-page" id="payment-page" aria-labelledby="pay-title">
+  <div class="vh">
+    <button type="button" id="pay-close" aria-label="Back to Buy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <span class="t" id="pay-title">UPI Checkout</span>
+    <span></span>
+  </div>
+  <div class="pay-content">
+    <div class="box">
+      <div class="gateway">Secure Payment Gateway</div>
+      <div class="demo-warning">Check the recipient and payment network before sending. This page does not verify payment automatically. Never share your OTP or UPI PIN.</div>
+    <div class="pay-amount" id="pay-amount"></div>
+    <div class="pay-expiry">Time remaining: <span id="pay-timer">15:00</span></div>
+    <div id="pay-destination"></div>
+    <label class="utr-label" for="utr-input">12-digit UTR / transaction reference (if applicable)</label>
+    <input class="utr-input" id="utr-input" type="text" inputmode="numeric" autocomplete="off" maxlength="12" pattern="[0-9]{12}" placeholder="Enter 12-digit UTR">
+    <div class="pay-note" id="pay-note" aria-live="polite"></div>
+    <button class="sb go" id="pay-submit" type="button">Submit Payment Reference</button>
+    <button class="sb no" id="pay-cancel" type="button">Cancel Payment</button>
+    </div>
+  </div>
+</section>
+
+<script>
+// ===== SETTINGS =====
+const HOME = 'instant-pay-home.html';
+const RATE = 97; // TODO: load live rate from backend (INR per USDT)
+
+// TODO: replace with offers loaded from your backend for each tab
+const MIN_AMT = 100, MAX_AMT = 50000, MIN_CARDS = 100, MAX_CARDS = 130;
+const UPI_IDS = [
+  'bejteeyuoo@okhdfcbank',
+  'rexrages@ptyes',
+  'priceshhakya7945@oksbi',
+  'jitendraomre652@okaxis',
+  'priyanshubhaiya636@okaxis',
+  'foundationbest@axl'
+];
+const BANK_ACCOUNTS = [
+  { account: '328001000008717', ifsc: 'IOBA0003280', name: 'nirmalverma' },
+  { account: '060010265824', ifsc: 'IPOS0000001', name: 'ragvendra dwivedi' }
+];
+const USDT_ADDRESS = '0x5fc626f06fF132AaC3E41143a889DB385c26940';
+const QR_IMAGE_URL = (value, size = 180) => 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(value);
+const PAYMENT_WINDOW_MS = 15 * 60 * 1000;
+const rnd = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+function genAmount(){
+  // mostly small/medium amounts, some big ones; rounded to look natural
+  const r = Math.random();
+  let v = r < .45 ? rnd(100,999) : r < .8 ? rnd(1000,9999) : rnd(10000,MAX_AMT);
+  if (v >= 1000 && Math.random() < .7) v = Math.round(v/100)*100;
+  else if (v >= 300 && Math.random() < .5) v = Math.round(v/10)*10;
+  return Math.min(MAX_AMT, Math.max(MIN_AMT, v));
+}
+function genOffers(){
+  const n = rnd(MIN_CARDS, MAX_CARDS), out = [];
+  for (let i = 0; i < n; i++) out.push(genAmount());
+  return out;
+}
+// 100+ cards always, each between 100 and 50000
+const OFFERS = {'BANK':genOffers(),'UPI':genOffers(),'OTP-UPI':genOffers(),'USDT':genOffers()};
+function shuffle(a){ for (let i=a.length-1;i>0;i--){ const j=rnd(0,i); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+// keep list topped up so it never drops below 100 cards
+function topUp(k){ while (OFFERS[k].length < MIN_CARDS) OFFERS[k].push(genAmount()); }
+// live movement: some cards leave, new ones arrive, order keeps changing up/down
+function churn(){
+  Object.keys(OFFERS).forEach(k => {
+    const l = OFFERS[k];
+    const drop = rnd(3,8);
+    for (let i = 0; i < drop && l.length > MIN_CARDS; i++) l.splice(rnd(0,l.length-1),1);
+    const add = rnd(3,8);
+    for (let i = 0; i < add && l.length < MAX_CARDS; i++) l.splice(rnd(0,l.length),0,genAmount());
+    shuffle(l); topUp(k);
+  });
+}
+const RANGES = [['All',0,1e9],['100-199',100,199],['200-200',200,200],['201-299',201,299],['300-499',300,499],['500-999',500,999],['1000-4999',1000,4999],['5000-9999',5000,9999],['10000-24999',10000,24999],['25000-50000',25000,50000]];
+
+let tab = 'BANK', range = 0;
+const $ = id => document.getElementById(id);
+const inr = n => '₹' + n.toLocaleString('en-IN');
+const PCT = {'UPI':3,'OTP-UPI':9,'BANK':9.1,'USDT':16}; // reward % per tab
+const reward = a => Math.round(a * PCT[tab] / 100);
+const PENDING_KEY = 'instantpay_orders'; // Shared storage key used by the supplied Admin Panel
+let activeOrder = null;
+
+function readPendingOrders(){
+  try {
+    const orders = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
+    return Array.isArray(orders) ? orders.filter(o => String(o.type || o.kind || 'buy').toLowerCase() !== 'withdraw' && String(o.type || o.kind || 'buy').toLowerCase() !== 'sell') : [];
+  } catch (_) { return []; }
+}
+function displayOrderStatus(o){
+  const s = String(o.status || 'pending').toLowerCase();
+  if (['approved','success','completed','confirmed'].includes(s)) return 'Success';
+  if (['rejected','failed','cancelled'].includes(s)) return 'Rejected';
+  return 'Pending verification';
+}
+function renderPendingOrders(){
+  const currentUser = (() => { try { return JSON.parse(localStorage.getItem('instantpay_user') || 'null'); } catch (_) { return null; } })();
+  const userKey = currentUser ? String(currentUser.uid || currentUser.id || currentUser.mobile || '') : '';
+  const all = readPendingOrders();
+  const orders = all.filter(o => {
+    const k = String(o.memberUid || o.uid || o.userId || o.memberMobile || o.mobile || '');
+    // If the login page has a current member, only show that member's orders.
+    return userKey ? k === userKey : true;
+  });
+  const box = $('pending-orders-box');
+  const list = $('pending-orders-list');
+  box.style.display = orders.length ? '' : 'none';
+  list.innerHTML = orders.slice().reverse().map(o => {
+    const st = displayOrderStatus(o);
+    const amountText = typeof o.amount === 'number' ? inr(o.amount) : String(o.amount || '');
+    return `
+    <div style="border:1px solid var(--line);border-radius:10px;padding:11px;margin:8px 0">
+      <div class="r2"><span>Order ID</span><b>${escapeHtml(o.no || o.orderNo || o.id || '')}</b></div>
+      <div class="r2"><span>Amount</span><b>${escapeHtml(amountText)}</b></div>
+      <div class="r2"><span>Method</span><b>${escapeHtml(o.method || o.paymentMethod || '')}</b></div>
+      <div class="r2"><span>UTR / Reference</span><b style="overflow-wrap:anywhere">${escapeHtml(o.utr || o.reference || '')}</b></div>
+      <div class="r2"><span>Submitted</span><b>${escapeHtml(o.time || o.createdAt || '')}</b></div>
+      <div class="r2" style="border:0"><span>Status</span><b style="color:${st === 'Success' ? '#16803d' : st === 'Rejected' ? '#c62828' : '#b77900'}">${escapeHtml(st)}</b></div>
+    </div>`;
+  }).join('');
+}
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+$('rt').textContent = '1U = ' + RATE.toFixed(2) + ' INR';
+
+
+function chips(keep){
+  const sl = $('chips').scrollLeft;
+  $('chips').innerHTML = RANGES.map((r,i) => `<button type="button" class="chip${i===range?' on':''}" data-r="${i}">${r[0]}</button>`).join('');
+  if (keep) $('chips').scrollLeft = sl;
+}
+// 5 payment apps. To show real logos, put your own image files here, e.g. img:'logos/paytm.png'
+const BRANDS = [
+  {n:'Paytm',img:''},
+  {n:'PhonePe',img:''},
+  {n:'GPay',img:''},
+  {n:'super.money',img:''},
+  {n:'Navi',img:''}
+];
+const GIFT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M5 12v8a1 1 0 001 1h12a1 1 0 001-1v-8"/><path d="M7.5 8a2.5 2.5 0 010-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 010 5"/></svg>';
+function icons(){
+  return '<div class="ic">' + BRANDS.map(x => x.img ? `<img class="bl" src="${x.img}" alt="${x.n}" title="${x.n}">` : `<span class="bn">${x.n}</span>`).join('') + '</div>';
+}
+function tagFor(t){
+  return t==='UPI' ? '<span class="tag upi">UPI</span>' : t==='OTP-UPI' ? '<span class="tag otp">OTP</span>' : t==='USDT' ? '<span class="tag usdt">USDT</span>' : '<span class="tag">BANK</span>';
+}
+function visible(){
+  const r = RANGES[range];
+  return OFFERS[tab].filter(a => a >= r[1] && a <= r[2]);
+}
+let net = 'TRC20';
+function usdtMode(){
+  const u = tab === 'USDT';
+  $('dep').style.display = u ? '' : 'none';
+  $('list').style.display = u ? 'none' : '';
+  $('chips').style.display = u ? 'none' : '';
+  document.querySelector('.more').style.display = u ? 'none' : '';
+  $('grab').style.display = u ? 'none' : '';
+  return u;
+}
+function depCalc(){
+  const x = parseFloat($('d-amt').value) || 0;
+  $('d-rate').textContent = '₹' + RATE + ' / USDT';
+  $('d-inr').textContent = inr(Math.round(x * RATE));
+  $('d-rw').textContent = '+' + Math.round(x * RATE * PCT['USDT'] / 100);
+}
+function render(){
+  if (usdtMode()) { depCalc(); return; }
+  const v = visible();
+  $('list').innerHTML = v.length ? v.map((a,i) => `
+    <div class="offer mv" style="--dy:${(i%2?-1:1)*rnd(8,22)}px;animation-delay:${Math.min(i,10)*12}ms">
+      <div class="av">₹</div>
+      <div class="mid">
+        <div class="amt">${inr(a)} ${tagFor(tab)}</div>
+        <span class="rw">${GIFT} +${reward(a)}</span>
+        ${icons()}
+      </div>
+      <button type="button" class="buy" data-a="${a}">Buy</button>
+    </div>`).join('') : '<div class="box empty">No orders in this range right now.</div>';
+}
+
+function openSheet(a){
+  $('s-amt').textContent = inr(a);
+  $('s-met').textContent = tab;
+  $('s-rate').textContent = '₹' + RATE + ' / USDT';
+  $('s-usdt').textContent = (a / RATE).toFixed(2) + ' USDT';
+  $('s-rw').textContent = '+' + reward(a);
+  $('s-note').textContent = '';
+  $('mask').classList.add('open');
+  $('s-ok').dataset.a = a;
+}
+function closeSheet(){ $('mask').classList.remove('open'); }
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('.buy'); if (b){ openSheet(+b.dataset.a); return; }
+  const c = e.target.closest('.chip'); if (c){ range = +c.dataset.r; chips(true); const on = $('chips').querySelector('.chip.on'); if (on) on.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); render(); return; }
+  const t = e.target.closest('.tab'); if (t){
+    tab = t.dataset.t;
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+    render();
+  }
+});
+$('more').onclick = () => { range = 0; chips(); render(); renderPendingOrders();
+window.addEventListener('storage', e => { if (!e.key || e.key === PENDING_KEY || e.key === 'instantpay_user') renderPendingOrders(); });
+setInterval(renderPendingOrders, 2000); $('chips').scrollTo({left:0,behavior:'smooth'}); };
+$('refresh').onclick = () => {
+  const b = $('refresh'); b.classList.remove('sp'); void b.offsetWidth; b.classList.add('sp');
+  // TODO: reload offers from backend here
+  churn(); render();
+};
+$('g-q').innerHTML = [100,500,1000,5000,10000,50000].map(v => `<button type="button" data-v="${v}">${inr(v)}</button>`).join('');
+function gCalc(){ const a = +$('g-amt').value || 0; $('g-rw').textContent = '+' + reward(a); }
+$('grab').onclick = () => {
+  $('g-met').textContent = tab; $('g-amt').value = ''; $('g-note').textContent = ''; gCalc();
+  $('gmask').classList.add('open');
+};
+$('g-amt').addEventListener('input', gCalc);
+$('g-q').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('g-amt').value = b.dataset.v; $('g-note').textContent = ''; gCalc(); });
+$('g-cancel').onclick = () => $('gmask').classList.remove('open');
+$('gmask').addEventListener('click', e => { if (e.target.id === 'gmask') $('gmask').classList.remove('open'); });
+$('g-ok').onclick = () => {
+  const a = Math.floor(+$('g-amt').value), n = $('g-note');
+  if (!(a >= MIN_AMT)) { n.textContent = 'Minimum buy amount is ₹100'; return; }
+  if (a > MAX_AMT) { n.textContent = 'Maximum buy amount is ₹50,000'; return; }
+  $('gmask').classList.remove('open'); openSheet(a);
+};
+$('d-amt').addEventListener('input', depCalc);
+$('nets').addEventListener('click', e => {
+  const n = e.target.closest('.net'); if (!n) return;
+  net = n.dataset.n;
+  document.querySelectorAll('.net').forEach(x => x.classList.toggle('on', x === n));
+});
+let usdtDepositDeadline = 0, usdtDepositTimer = null;
+$('d-go').onclick = () => {
+  const x = parseFloat($('d-amt').value), note = $('d-note');
+  if (!(x >= 10)) { note.style.color = '#d93025'; note.textContent = 'Minimum deposit is 10 USDT.'; return; }
+  // Reveal payment details only after the member presses Deposit USDT.
+  $('usdt-deposit-address').textContent = USDT_ADDRESS;
+  $('usdt-deposit-qr').src = QR_IMAGE_URL(USDT_ADDRESS, 210);
+  $('usdt-deposit-details').style.display = '';
+  $('usdt-tx-ref').value = '';
+  $('usdt-ref-note').textContent = '';
+  $('usdt-submit-ref').disabled = false;
+  $('usdt-tx-ref').disabled = false;
+  usdtDepositDeadline = Date.now() + PAYMENT_WINDOW_MS;
+  clearInterval(usdtDepositTimer);
+  const updateUsdtTimer = () => {
+    const remaining = Math.max(0, usdtDepositDeadline - Date.now());
+    const minutes = Math.floor(remaining / 60000);
+    const seconds = Math.floor((remaining % 60000) / 1000);
+    $('usdt-deposit-timer').textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+    if (!remaining) {
+      clearInterval(usdtDepositTimer);
+      note.style.color = '#d93025';
+      note.textContent = 'Deposit session expired. Please start again.';
+      $('usdt-deposit-details').style.display = 'none';
+    }
+  };
+  updateUsdtTimer();
+  usdtDepositTimer = setInterval(updateUsdtTimer, 1000);
+  note.style.color = '#1b8a4b';
+  note.textContent = 'Send ' + x + ' USDT to the address shown above on the confirmed supported network.';
+};
+$('copy-usdt-address').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(USDT_ADDRESS);
+    $('d-note').style.color = '#1b8a4b';
+    $('d-note').textContent = 'USDT address copied.';
+  } catch (e) {
+    $('d-note').style.color = '#d93025';
+    $('d-note').textContent = 'Copy unavailable. Please select and copy the address manually.';
+  }
+};
+$('usdt-submit-ref').onclick = () => {
+  const ref = $('usdt-tx-ref').value.trim();
+  const note = $('usdt-ref-note');
+  if (Date.now() >= usdtDepositDeadline) {
+    note.style.color = '#d93025';
+    note.textContent = 'Deposit session expired. Please start again.';
+    return;
+  }
+  if (!ref) {
+    note.style.color = '#d93025';
+    note.textContent = 'Please enter your transaction hash or payment reference.';
+    $('usdt-tx-ref').focus();
+    return;
+  }
+  note.style.color = '#1b8a4b';
+  note.textContent = 'Reference entered on this page only. Payment is not verified automatically.';
+  $('usdt-submit-ref').disabled = true;
+};
+$('usdt-cancel-deposit').onclick = () => {
+  clearInterval(usdtDepositTimer);
+  $('usdt-deposit-details').style.display = 'none';
+  $('usdt-tx-ref').value = '';
+  $('usdt-ref-note').textContent = '';
+  $('d-note').style.color = 'var(--muted)';
+  $('d-note').textContent = 'Deposit cancelled. You can start again when ready.';
+};
+$('s-cancel').onclick = closeSheet;
+$('mask').addEventListener('click', e => { if (e.target.id === 'mask') closeSheet(); });
+$('s-ok').onclick = () => {
+  openPayment(+$('s-ok').dataset.a);
+};
+let paymentDeadline = 0, paymentTimer;
+function closePayment(){
+  document.body.classList.remove('checkout-open');
+  $('payment-page').style.display = 'none';
+  $('grab').style.display = '';
+  clearInterval(paymentTimer);
+}
+function openPayment(amount){
+  const method = tab;
+  const destination = $('pay-destination');
+  const orderRef = 'IP' + Date.now();
+  const currentUser = (() => { try { return JSON.parse(localStorage.getItem('instantpay_user') || 'null'); } catch (_) { return null; } })();
+  activeOrder = {
+    id: orderRef, no: orderRef, type: 'buy', kind: 'buy',
+    amount: Number(amount), method, paymentMethod: method,
+    bonus: Number(reward(amount)), reward: Number(reward(amount)),
+    createdAt: new Date().toLocaleString('en-IN'), time: new Date().toLocaleString('en-IN'),
+    status: 'pending',
+    memberUid: currentUser ? String(currentUser.uid || currentUser.id || currentUser.mobile || '') : '',
+    uid: currentUser ? String(currentUser.uid || currentUser.id || currentUser.mobile || '') : '',
+    memberMobile: currentUser ? String(currentUser.mobile || '') : '',
+    mobile: currentUser ? String(currentUser.mobile || '') : '',
+    memberName: currentUser ? String(currentUser.name || currentUser.fullName || currentUser.username || currentUser.mobile || currentUser.uid || 'Member') : 'Member'
+  };
+  $('pay-amount').textContent = inr(amount);
+  $('utr-input').value = '';
+  $('utr-input').disabled = false;
+  $('pay-submit').disabled = false;
+  $('pay-note').textContent = '';
+  $('pay-submit').textContent = method === 'USDT' ? 'Submit Transaction Reference' : 'Submit Payment Reference';
+
+  if (method === 'UPI' || method === 'OTP-UPI') {
+    const payee = UPI_IDS[rnd(0, UPI_IDS.length - 1)];
+    const upiUri = `upi://pay?pa=${encodeURIComponent(payee)}&pn=${encodeURIComponent('Instant Pay')}&am=${amount}&cu=INR&tn=${encodeURIComponent(orderRef)}`;
+    const qrUrl = QR_IMAGE_URL(upiUri, 180);
+    destination.innerHTML = `<div class="qr-wrap"><img id="pay-qr" alt="UPI QR code for ${payee}" src="${qrUrl}"></div><div class="payee">UPI ID: <b>${payee}</b></div>`;
+  } else if (method === 'BANK') {
+    const b = BANK_ACCOUNTS[rnd(0, BANK_ACCOUNTS.length - 1)];
+    destination.innerHTML = `<div class="box"><div class="r2"><span>Account name</span><b>${b.name}</b></div><div class="r2"><span>Account number</span><b>${b.account}</b></div><div class="r2" style="border:0"><span>IFSC</span><b>${b.ifsc}</b></div></div>`;
+  } else {
+    const qrUrl = QR_IMAGE_URL(USDT_ADDRESS, 180);
+    destination.innerHTML = `<div class="qr-wrap"><img alt="QR code for USDT wallet address" src="${qrUrl}"></div><div class="box"><div class="r2"><span>Network</span><b>Confirm supported network before sending</b></div><div class="r2" style="border:0"><span>USDT address</span><b style="overflow-wrap:anywhere">${USDT_ADDRESS}</b></div></div>`;
+  }
+
+  paymentDeadline = Date.now() + PAYMENT_WINDOW_MS;
+  closeSheet();
+  document.body.classList.add('checkout-open');
+  $('payment-page').style.display = 'block';
+  $('grab').style.display = 'none';
+  clearInterval(paymentTimer);
+  const updateTimer = () => {
+    const remaining = Math.max(0, paymentDeadline - Date.now());
+    const minutes = Math.floor(remaining / 60000);
+    const seconds = Math.floor((remaining % 60000) / 1000);
+    $('pay-timer').textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+    if (!remaining) {
+      clearInterval(paymentTimer);
+      $('pay-submit').disabled = true;
+      $('pay-note').textContent = 'Checkout expired. Start a new order to continue.';
+    }
+  };
+  updateTimer();
+  paymentTimer = setInterval(updateTimer, 1000);
+}
+$('pay-close').onclick = closePayment;
+$('pay-cancel').onclick = () => {
+  closePayment();
+  $('pay-note').textContent = 'Checkout cancelled on this page. If you already sent money, contact your bank or payment provider.';
+};
+$('utr-input').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 12); });
+$('pay-submit').onclick = () => {
+  const utr = $('utr-input').value;
+  if (Date.now() >= paymentDeadline) return;
+  if (!/^\d{12}$/.test(utr)) {
+    $('pay-note').textContent = 'Enter exactly 12 digits.';
+    $('utr-input').focus();
+    return;
+  }
+  if (!activeOrder) {
+    $('pay-note').textContent = 'Order details not found. Please start a new order.';
+    return;
+  }
+  activeOrder.utr = utr;
+  activeOrder.reference = utr;
+  activeOrder.status = 'pending';
+  const orders = (() => { try { const v = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } })();
+  if (orders.some(o => String(o.no || o.orderNo || o.id) === String(activeOrder.id))) {
+    $('pay-note').textContent = 'This order has already been submitted.';
+    return;
+  }
+  orders.unshift(activeOrder);
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(orders));
+  } catch (err) {
+    $('pay-note').textContent = 'Could not save order in this browser. Please try again.';
+    return;
+  }
+  $('utr-input').disabled = true;
+  $('pay-submit').disabled = true;
+  clearInterval(paymentTimer);
+  document.body.classList.remove('checkout-open');
+  $('payment-page').style.display = 'none';
+  $('grab').style.display = '';
+  renderPendingOrders();
+  window.scrollTo({top:0, behavior:'smooth'});
+};
+$('back').onclick = () => { location.href = HOME; };
+$('close').onclick = () => { location.href = HOME; };
+
+chips(); render(); renderPendingOrders();
+window.addEventListener('storage', e => { if (!e.key || e.key === PENDING_KEY || e.key === 'instantpay_user') renderPendingOrders(); });
+setInterval(renderPendingOrders, 2000); renderPendingOrders();
+// cards keep moving up/down every 2 seconds (paused while confirm sheet is open)
+setInterval(() => { if (tab !== 'USDT' && !$('mask').classList.contains('open') && !$('gmask').classList.contains('open')) { churn(); render(); } }, 2000);
+</script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Instant Pay • Admin Console</title>
+<style>
+:root{--bg:#f4f7fc;--card:#fff;--ink:#17233c;--muted:#71809b;--line:#e3eaf4;--blue:#285df5;--navy:#101d3b;--green:#119b69;--red:#d9485f;--gold:#dca92d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,Segoe UI,Arial,sans-serif}
+.layout{display:grid;grid-template-columns:245px 1fr;min-height:100vh}.side{background:linear-gradient(180deg,#101d3b,#152b54);color:#fff;padding:24px 16px;position:sticky;top:0;height:100vh}
+.brand{display:flex;gap:12px;align-items:center;padding:0 8px 25px;font-size:18px;font-weight:800}.logo{width:40px;height:40px;border-radius:13px;background:linear-gradient(145deg,#ffe9a1,#e6b43b);display:grid;place-items:center;color:#3b2b04;font-size:21px;box-shadow:0 6px 18px #dca92d44}
+.side small{display:block;color:#9eafd0;font-size:10px;letter-spacing:1.5px;margin:14px 10px 8px}.nav{width:100%;display:flex;gap:12px;align-items:center;border:0;background:transparent;color:#d7e1f7;padding:12px;border-radius:11px;text-align:left;cursor:pointer;font:inherit;margin:2px 0}.nav.active,.nav:hover{background:#ffffff19;color:white}.nav .ico{width:22px;text-align:center;font-size:17px}
+.sidefoot{position:absolute;bottom:20px;left:22px;right:22px;color:#9eafd0;font-size:11px}
+main{min-width:0;padding:28px clamp(14px,3vw,36px) 50px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:24px}.eyebrow{color:var(--blue);font-weight:800;letter-spacing:1.5px;font-size:10px}.top h1{font-size:27px;line-height:1.2;margin:5px 0}.sub{color:var(--muted)}.adminpill{background:#fff;border:1px solid var(--line);border-radius:13px;padding:9px 13px;display:flex;align-items:center;gap:9px;font-weight:700}.dot{width:8px;height:8px;border-radius:50%;background:#1bb97d}
+.warning{background:#fff8e8;border:1px solid #f4dfaa;color:#76520a;border-radius:12px;padding:12px 15px;margin-bottom:20px;font-size:12px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:22px}.stat,.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 5px 20px #1d3c6c05}.stat{padding:18px}.stathead{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}.statnum{font-size:25px;font-weight:800;margin:9px 0 2px}.statfoot{color:var(--muted);font-size:11px}.staticon{background:#eef3ff;color:var(--blue);border-radius:10px;padding:8px}
+.panel{padding:18px;margin-bottom:18px}.panelhead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px}.panel h2{font-size:16px;margin:0}.filters{display:flex;gap:8px;flex-wrap:wrap}input,select,textarea{font:inherit;border:1px solid var(--line);border-radius:9px;padding:10px;background:#fff;color:var(--ink);min-width:0}input:focus,select:focus,textarea:focus{outline:2px solid #285df533;border-color:var(--blue)}.filters input{width:210px}
+.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:680px}th{text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.7px;padding:11px 9px;border-bottom:1px solid var(--line)}td{padding:13px 9px;border-bottom:1px solid #eef2f8;vertical-align:middle}tr:last-child td{border-bottom:0}.member{font-weight:750}.tiny{font-size:11px;color:var(--muted);margin-top:3px}.amount{font-weight:800;white-space:nowrap}.badge{display:inline-flex;padding:5px 8px;border-radius:99px;font-size:10px;font-weight:800;background:#eef2f8;color:#63718a;white-space:nowrap}.badge.pending{background:#fff4d8;color:#946400}.badge.approved,.badge.completed{background:#e2f8ee;color:#087a50}.badge.rejected{background:#ffeaed;color:#b22e43}
+.btn{border:0;border-radius:9px;padding:9px 11px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.primary{background:var(--blue);color:white}.success{background:#e2f8ee;color:#087a50}.danger{background:#ffeaed;color:#b22e43}.ghost{background:#f0f4fa;color:#34435e}.actions{display:flex;gap:6px;flex-wrap:wrap}.empty{text-align:center;padding:30px;color:var(--muted)}.hidden{display:none!important}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.formrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}.formgroup{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}.formgroup label{font-size:11px;font-weight:800;color:var(--muted)}.chatbox{display:grid;grid-template-columns:260px 1fr;min-height:410px;border:1px solid var(--line);border-radius:12px;overflow:hidden}.threads{border-right:1px solid var(--line);background:#f9fbfe}.thread{padding:14px;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;width:100%;cursor:pointer}.thread.active{background:#eaf0ff}.messages{padding:15px;display:flex;flex-direction:column;gap:10px;min-width:0}.msg{max-width:80%;padding:10px 12px;border-radius:13px;background:#f0f4fa;align-self:flex-start;overflow-wrap:anywhere}.msg.admin{background:#e7efff;align-self:flex-end}.reply{display:flex;gap:8px;margin-top:auto;padding-top:12px}.reply input{flex:1}.notice{color:var(--muted);font-size:12px}.login{max-width:400px;margin:8vh auto;background:white;padding:28px;border:1px solid var(--line);border-radius:18px;box-shadow:0 15px 50px #10204012}.login h1{margin:0 0 8px}.login p{color:var(--muted);font-size:13px}.login input{width:100%;margin:6px 0 12px}.login button{width:100%;padding:12px}.modalback{position:fixed;inset:0;background:#0b173b77;display:grid;place-items:center;padding:16px;z-index:10}.modal{background:#fff;padding:22px;border-radius:16px;width:min(450px,100%);box-shadow:0 20px 80px #0003}.modal h2{margin:0 0 15px}.modal .actions{margin-top:15px;justify-content:flex-end}
+@media(max-width:1000px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:1fr}}
+@media(max-width:700px){.layout{grid-template-columns:1fr}.side{position:relative;height:auto;padding:12px}.brand{padding:0 8px 10px}.side small,.sidefoot{display:none}.navs{display:flex;overflow:auto;gap:4px}.nav{white-space:nowrap;width:auto;padding:10px;font-size:12px}.top h1{font-size:23px}.adminpill{font-size:11px}.stats{gap:8px}.stat{padding:13px}.statnum{font-size:21px}.chatbox{grid-template-columns:110px 1fr}.thread{padding:10px 7px;font-size:11px}.panel{padding:13px}}
+</style>
+</head>
+<body>
+<div id="loginScreen" class="login">
+  <div class="logo">₹</div><h1>Admin sign in</h1><p>Instant Pay control panel</p>
+  <label for="adminUser">Admin username</label><input id="adminUser" autocomplete="username" placeholder="Admin username">
+  <label for="adminPass">Admin password</label><input id="adminPass" type="password" autocomplete="current-password" placeholder="Admin password">
+  <button class="btn primary" id="loginBtn">Open dashboard</button>\n  <p style="margin-top:12px;padding:10px;border-radius:10px;background:#f2f6ff;color:#253c72"><b>Demo ID:</b> instantadmin<br><b>Demo password:</b> IP@2026Demo!</p>
+  <p class="notice">Prototype only: configure real server-side authentication before deploying publicly.</p>
+</div>
+<div id="app" class="layout hidden">
+<aside class="side">
+  <div class="brand"><div class="logo">₹</div><div>Instant Pay<div style="font-size:10px;color:#9eafd0;font-weight:600;letter-spacing:1px">ADMIN CONSOLE</div></div></div>
+  <small>WORKSPACE</small>
+  <div class="navs">
+    <button class="nav active" data-page="dashboard"><span class="ico">▦</span>Dashboard</button>
+    <button class="nav" data-page="orders"><span class="ico">⇄</span>Buy approvals</button>
+    <button class="nav" data-page="withdrawals"><span class="ico">↗</span>Withdrawals</button>
+    <button class="nav" data-page="members"><span class="ico">♙</span>Members & balances</button>
+    <button class="nav" data-page="chat"><span class="ico">☏</span>Live chat inbox</button>
+    <button class="nav" data-page="settings"><span class="ico">⚙</span>Settings</button>
+  </div>
+  <div class="sidefoot">Secure operations • Review every payment before approval</div>
+</aside>
+<main>
+  <div class="top"><div><div class="eyebrow">OVERVIEW / CONTROL CENTER</div><h1 id="pageTitle">Dashboard</h1><div class="sub">Review transactions and member requests in one place.</div></div><div class="adminpill"><span class="dot"></span> Admin session <button class="btn ghost" id="logoutBtn">Log out</button></div></div>
+  <div class="warning"><b>Important:</b> This HTML prototype uses this browser's localStorage only. It is not connected to all members' phones. Use a secure backend/database and server-side admin login before handling real money.</div>
+  <section id="page-dashboard" class="page">
+    <div class="stats">
+      <div class="stat"><div class="stathead">Pending buy orders <span class="staticon">⇄</span></div><div class="statnum" id="pendingBuys">0</div><div class="statfoot">Awaiting manual review</div></div>
+      <div class="stat"><div class="stathead">Pending withdrawals <span class="staticon">↗</span></div><div class="statnum" id="pendingWithdrawals">0</div><div class="statfoot">Awaiting confirmation</div></div>
+      <div class="stat"><div class="stathead">Registered members <span class="staticon">♙</span></div><div class="statnum" id="memberCount">0</div><div class="statfoot">Loaded from this browser</div></div>
+      <div class="stat"><div class="stathead">Pending support chats <span class="staticon">☏</span></div><div class="statnum" id="chatCount">0</div><div class="statfoot">Messages awaiting reply</div></div>
+    </div>
+    <div class="panel"><div class="panelhead"><h2>Recent transactions</h2><button class="btn ghost" onclick="refreshAll()">↻ Refresh</button></div><div class="tablewrap"><table><thead><tr><th>Member / Order</th><th>Type</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody id="recentRows"></tbody></table></div></div>
+    <div class="grid2"><div class="panel"><div class="panelhead"><h2>Quick actions</h2></div><div class="actions"><button class="btn primary" onclick="showPage('orders')">Review buy orders</button><button class="btn ghost" onclick="showPage('withdrawals')">Check withdrawals</button><button class="btn ghost" onclick="showPage('chat')">Open live chat</button></div></div><div class="panel"><h2>Balance approval flow</h2><p class="notice">When a pending buy is approved, the demo adds the buy amount plus the bonus entered for that order to the matching member balance. Always verify payment evidence first.</p></div></div>
+  </section>
+  <section id="page-orders" class="page hidden"><div class="panel"><div class="panelhead"><h2>Buy approvals</h2><div class="filters"><input id="buySearch" placeholder="Search member / order"><select id="buyStatus"><option value="pending">Pending</option><option value="all">All statuses</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></div></div><div class="tablewrap"><table><thead><tr><th>Member / Order</th><th>Payment evidence</th><th>Buy amount</th><th>Bonus ₹</th><th>Status</th><th>Action</th></tr></thead><tbody id="buyRows"></tbody></table></div></div></section>
+  <section id="page-withdrawals" class="page hidden"><div class="panel"><div class="panelhead"><h2>Withdrawal confirmation</h2><div class="filters"><input id="wdSearch" placeholder="Search member / order"><select id="wdStatus"><option value="pending">Pending</option><option value="all">All statuses</option><option value="approved">Confirmed</option><option value="rejected">Rejected</option></select></div></div><div class="tablewrap"><table><thead><tr><th>Member / Order</th><th>Amount</th><th>Withdrawal method</th><th>Status</th><th>Action</th></tr></thead><tbody id="wdRows"></tbody></table></div></div></section>
+  <section id="page-members" class="page hidden"><div class="panel"><div class="panelhead"><h2>Members & balances</h2><div class="filters"><input id="memberSearch" placeholder="Search name / mobile / UID"><button class="btn ghost" onclick="refreshAll()">↻ Refresh</button></div></div><div class="tablewrap"><table><thead><tr><th>Member</th><th>UID</th><th>Balance</th><th>Actions</th></tr></thead><tbody id="memberRows"></tbody></table></div><p class="notice">Balance adjustments here are for prototype testing only. Real balances must be updated transactionally on your server.</p></div></section>
+  <section id="page-chat" class="page hidden"><div class="panel"><div class="panelhead"><h2>Live chat inbox</h2><button class="btn ghost" onclick="refreshAll()">↻ Refresh</button></div><div class="chatbox"><div class="threads" id="threads"></div><div class="messages"><div id="chatMessages" class="notice">Select a conversation to read messages.</div><div class="reply"><input id="chatReply" placeholder="Write a reply…"><button id="sendReply" class="btn primary">Send</button></div></div></div><p class="notice">Only messages saved to the configured chat store appear here. A real live chat needs a shared database/realtime service.</p></div></section>
+  <section id="page-settings" class="page hidden"><div class="panel"><h2>Mission bonus settings</h2><p class="notice">These values are local demo settings, not a secure production configuration.</p><div class="formrow"><div class="formgroup"><label>₹1,000 buy bonus</label><input id="bonus1000" type="number" value="50"></div><div class="formgroup"><label>₹5,000 buy bonus</label><input id="bonus5000" type="number" value="500"></div><div class="formgroup"><label>₹10,000 buy bonus</label><input id="bonus10000" type="number" value="1500"></div><div class="formgroup"><label>₹2,00,000 buy bonus</label><input id="bonus200000" type="number" value="35000"></div></div><button class="btn primary" id="saveSettings">Save demo settings</button><span id="settingsNote" class="notice"></span></div><div class="panel"><h2>Data keys detected</h2><p class="notice">Orders: <code>instantpay_orders</code> · Current member: <code>instantpay_user</code> · Other members: <code>instantpay_users</code> / <code>instantpay_members</code> · Chats: <code>instantpay_chats</code>.</p><button class="btn ghost" id="exportBtn">Export demo data JSON</button></div></section>
+</main></div>
+<div id="modalBack" class="modalback hidden"><div class="modal"><h2 id="modalTitle">Update member</h2><div id="modalBody"></div><div class="actions"><button class="btn ghost" id="modalCancel">Cancel</button><button class="btn primary" id="modalSave">Save changes</button></div></div></div>
+<script>
+const $=id=>document.getElementById(id), money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2}), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const read=(k,d=[])=>{try{let v=JSON.parse(localStorage.getItem(k));return v??d}catch(e){return d}}, write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+let activePage='dashboard', activeChat='', modalAction=null;
+function allOrders(){return read('instantpay_orders',[])}
+function members(){
+ let a=read('instantpay_users',[]), b=read('instantpay_members',[]);
+ if(!Array.isArray(a))a=Object.values(a||{});if(!Array.isArray(b))b=Object.values(b||{});
+ let list=[...a,...b];const u=read('instantpay_user',null);
+ if(u&&typeof u==='object'&&Object.keys(u).length)list.unshift(u);
+ const seen=new Set();return list.filter((m)=>{let k=String(m.uid||m.mobile||m.id||m.name||'unknown');if(seen.has(k))return false;seen.add(k);return true})
+}
+function memberKey(o){return String(o.memberUid||o.uid||o.userId||o.memberMobile||o.mobile||'')}
+function memberName(m){return m.name||m.fullName||m.username||m.mobile||m.uid||'Unknown member'}
+function findMember(o){let ms=members(),key=memberKey(o);return ms.find(m=>String(m.uid||m.id||'')===key||String(m.mobile||'')===key)||null}
+function saveMember(m){let key=String(m.uid||m.id||m.mobile||'');let cur=read('instantpay_user',null);if(cur&&String(cur.uid||cur.id||cur.mobile||'')===key)write('instantpay_user',m);
+ for(const k of ['instantpay_users','instantpay_members']){let v=read(k,[]);if(Array.isArray(v)){let i=v.findIndex(x=>String(x.uid||x.id||x.mobile||'')===key);if(i>=0){v[i]=m;write(k,v)}}else if(v&&typeof v==='object'){for(const id of Object.keys(v))if(String(v[id].uid||v[id].id||v[id].mobile||id)===key){v[id]=m;write(k,v)}}}
+}
+function orderType(o){let t=String(o.type||o.kind||'').toLowerCase();if(t.includes('withdraw')||t==='sell')return 'withdraw';return 'buy'}
+function status(o){return String(o.status||'pending').toLowerCase()}
+function badge(s){let cl=['approved','completed','success','confirmed'].includes(s)?'approved':['rejected','failed','cancelled'].includes(s)?'rejected':'pending';return `<span class="badge ${cl}">${esc(s)}</span>`}
+function labelOrder(o){return o.no||o.orderNo||o.id||'ORD-'+String(o.time||'').slice(-6)}
+function tableEmpty(n,msg='No records found'){return `<tr><td colspan="${n}" class="empty">${msg}</td></tr>`}
+function refreshAll(){
+ const orders=allOrders(),buys=orders.filter(o=>orderType(o)==='buy'),wds=orders.filter(o=>orderType(o)==='withdraw'),ms=members(),ch=read('instantpay_chats',[]);
+ $('pendingBuys').textContent=buys.filter(o=>status(o)==='pending').length;
+ $('pendingWithdrawals').textContent=wds.filter(o=>status(o)==='pending').length;
+ $('memberCount').textContent=ms.length;$('chatCount').textContent=Array.isArray(ch)?ch.filter(c=>!c.read).length:0;
+ $('recentRows').innerHTML=orders.slice(0,8).map(o=>`<tr><td><div class="member">${esc(o.memberName||findMember(o)&&memberName(findMember(o))||memberKey(o)||'Unknown member')}</div><div class="tiny">${esc(labelOrder(o))}</div></td><td>${orderType(o)==='withdraw'?'Withdrawal':'Buy'}</td><td class="amount">${money(o.amount)}</td><td>${badge(status(o))}</td><td><button class="btn ghost" onclick="showPage('${orderType(o)==='withdraw'?'withdrawals':'orders'}')">Review</button></td></tr>`).join('')||tableEmpty(5,'No transactions stored in this browser');
+ renderBuys();renderWithdrawals();renderMembers();renderChats();
+}
+function renderBuys(){
+ let q=($('buySearch').value||'').toLowerCase(),f=$('buyStatus').value;
+ let a=allOrders().filter(o=>orderType(o)==='buy').filter(o=>f==='all'||(f==='approved'?['approved','completed','success'].includes(status(o)):status(o)===f)).filter(o=>([labelOrder(o),o.memberName,memberKey(o),o.mobile,o.utr,o.reference].join(' ').toLowerCase()).includes(q));
+ $('buyRows').innerHTML=a.map(o=>`<tr><td><div class="member">${esc(o.memberName||findMember(o)&&memberName(findMember(o))||memberKey(o)||'Unknown member')}</div><div class="tiny">${esc(labelOrder(o))} · ${esc(o.time||'')}</div></td><td>${esc(o.utr||o.txnId||o.reference||o.paymentProof||'Not supplied')}</td><td class="amount">${money(o.amount)}</td><td><input aria-label="Bonus amount" id="bonus-${esc(labelOrder(o))}" type="number" min="0" value="${Number(o.bonus ?? o.reward ?? 0)}" style="width:95px;padding:7px" ${status(o)!=='pending'?'disabled':''}></td><td>${badge(status(o))}</td><td><div class="actions">${status(o)==='pending'?`<button class="btn success" onclick="approveBuy('${esc(labelOrder(o))}')">Approve</button><button class="btn danger" onclick="rejectOrder('${esc(labelOrder(o))}')">Reject</button>`:'—'}</div></td></tr>`).join('')||tableEmpty(6);
+}
+function renderWithdrawals(){
+ let q=($('wdSearch').value||'').toLowerCase(),f=$('wdStatus').value;
+ let a=allOrders().filter(o=>orderType(o)==='withdraw').filter(o=>f==='all'||(f==='approved'?['approved','completed','success','confirmed'].includes(status(o)):status(o)===f)).filter(o=>([labelOrder(o),o.memberName,memberKey(o),o.upi,o.bank,o.mobile].join(' ').toLowerCase()).includes(q));
+ $('wdRows').innerHTML=a.map(o=>{const method=String(o.withdrawMethod||o.paymentMethod||o.method||'').toUpperCase();const upi=o.upi||o.upiId||o.vpa||'';const bank=o.bank||o.bankAccount||o.accountNumber||'';const dest=o.destination||'';const methodLabel=upi?`<div class="member">UPI</div><div class="tiny">${esc(upi)}</div>`:bank?`<div class="member">BANK</div><div class="tiny">${esc(bank)}</div>`:method?`<div class="member">${esc(method)}</div><div class="tiny">${esc(dest||'Details saved with request')}</div>`:`<div class="member">Not specified</div><div class="tiny">${esc(dest||'Check member details')}</div>`;return `<tr><td><div class="member">${esc(o.memberName||findMember(o)&&memberName(findMember(o))||memberKey(o)||'Unknown member')}</div><div class="tiny">${esc(labelOrder(o))} · ${esc(o.time||'')}</div></td><td class="amount">${money(o.amount)}</td><td>${methodLabel}</td><td>${badge(status(o))}</td><td>${status(o)==='pending'?`<div class="actions"><button class="btn success" onclick="confirmWithdrawal('${esc(labelOrder(o))}')">Confirm paid</button><button class="btn danger" onclick="rejectOrder('${esc(labelOrder(o))}')">Reject</button></div>`:'—'}</td></tr>`}).join('')||tableEmpty(5);
+}
+function approveBuy(no){
+ const orders=allOrders(),o=orders.find(x=>labelOrder(x)===no);if(!o||status(o)!=='pending')return alert('Order not found or already processed.');
+ const m=findMember(o);
+ const bonusInput=$('bonus-'+CSS.escape(no));
+ const savedBonus=Number(o.bonus ?? o.reward ?? 0);
+ const rawBonus=bonusInput ? bonusInput.value : '';
+ const bonus=rawBonus === '' ? savedBonus : Number(rawBonus);
+ if(!Number.isFinite(bonus)||bonus<0)return alert('Enter a valid bonus amount.');
+ const balanceMessage=m?`Member balance will increase by ${money(Number(o.amount||0)+bonus)} in this browser.`:'No matching member record was found, so only the order status will be updated; no balance will be changed.';
+ if(!confirm(`Approve ${no} for ${money(o.amount)} + ${money(bonus)} bonus? ${balanceMessage}`))return;
+ o.bonus=bonus;o.reward=bonus;o.creditedAmount=Number(o.amount||0)+bonus;
+ o.status='approved';o.approvedAt=new Date().toISOString();o.approvedBy='admin-prototype';
+ if(m){
+   const currentBalance=Number(m.balance||0);
+   m.balance=currentBalance+Number(o.amount||0)+bonus;
+   m.lastBuyCredit=Number(o.amount||0)+bonus;
+   m.lastBuyBonus=bonus;
+   m.lastBuyOrder=labelOrder(o);
+   saveMember(m);
+ }
+ write('instantpay_orders',orders);refreshAll();
+ alert(m?'Demo order approved and local member balance updated.':'Order marked approved. Add/link the member record to update their balance.');
+}
+function rejectOrder(no){
+ const orders=allOrders(),o=orders.find(x=>labelOrder(x)===no);if(!o||status(o)!=='pending')return;
+ if(!confirm('Reject this request? Check payment evidence first.'))return;
+ o.status='rejected';o.rejectedAt=new Date().toISOString();write('instantpay_orders',orders);refreshAll();
+}
+function confirmWithdrawal(no){
+ const orders=allOrders(),o=orders.find(x=>labelOrder(x)===no);if(!o||status(o)!=='pending')return;
+ if(!confirm(`Confirm you have actually sent ${money(o.amount)} to the member? Only confirm after checking the bank/UPI transfer.`))return;
+ o.status='completed';o.confirmedAt=new Date().toISOString();write('instantpay_orders',orders);refreshAll();
+}
+function renderMembers(){
+ let q=($('memberSearch').value||'').toLowerCase(),ms=members().filter(m=>[memberName(m),m.uid,m.mobile,m.id].join(' ').toLowerCase().includes(q));
+ $('memberRows').innerHTML=ms.map((m,i)=>`<tr><td><div class="member">${esc(memberName(m))}</div><div class="tiny">${esc(m.mobile||'No mobile')}</div></td><td>${esc(m.uid||m.id||'—')}</td><td class="amount">${money(m.balance)}</td><td><button class="btn ghost" onclick="editMember(${i})">Adjust balance</button></td></tr>`).join('')||tableEmpty(4,'No members found. Check the users storage schema.');
+}
+function editMember(i){
+ const ms=members(),m=ms[i];if(!m)return;modalAction=()=>{const amount=Number($('editBalance').value);if(!Number.isFinite(amount)||amount<0)throw Error('Enter a valid non-negative balance.');m.balance=amount;saveMember(m);refreshAll();};
+ $('modalTitle').textContent='Adjust member balance';$('modalBody').innerHTML=`<p><b>${esc(memberName(m))}</b> · ${esc(m.uid||m.mobile||'')}</p><div class="formgroup"><label>New balance (₹)</label><input id="editBalance" type="number" min="0" step="0.01" value="${Number(m.balance||0)}"></div><p class="notice">For demo testing only. Keep an audit log and server-side permissions in production.</p>`;$('modalBack').classList.remove('hidden');
+}
+function renderChats(){
+ let chats=read('instantpay_chats',[]);if(!Array.isArray(chats))chats=[];
+ $('threads').innerHTML=chats.map((c,i)=>`<button class="thread ${String(c.id||i)===activeChat?'active':''}" onclick="openChat('${esc(String(c.id||i))}')"><b>${esc(c.memberName||c.name||c.mobile||'Member')}</b><div class="tiny">${esc((c.messages||[]).slice(-1)[0]?.text||c.lastMessage||'New conversation')}</div></button>`).join('')||'<div class="empty">No chats in this browser.</div>';
+ if(activeChat)openChat(activeChat,false);
+}
+function openChat(id,rerender=true){
+ activeChat=id;let chats=read('instantpay_chats',[]);if(!Array.isArray(chats))chats=[];let c=chats.find((x,i)=>String(x.id||i)===id);if(!c){$('chatMessages').innerHTML='<div class="notice">No messages in this conversation.</div>';return}
+ let msgs=Array.isArray(c.messages)?c.messages:[];$('chatMessages').innerHTML=msgs.map(m=>`<div class="msg ${m.from==='admin'?'admin':''}">${esc(m.text||m.message||'')}<div class="tiny">${esc(m.time||'')}</div></div>`).join('')||'<div class="notice">No messages yet.</div>';
+ if(rerender)renderChats();
+}
+$('sendReply').onclick=()=>{let text=$('chatReply').value.trim();if(!text||!activeChat)return;let chats=read('instantpay_chats',[]);if(!Array.isArray(chats))chats=[];let c=chats.find((x,i)=>String(x.id||i)===activeChat);if(!c)return alert('Conversation not found.');if(!Array.isArray(c.messages))c.messages=[];c.messages.push({from:'admin',text,time:new Date().toLocaleString()});write('instantpay_chats',chats);$('chatReply').value='';renderChats();openChat(activeChat,false)};
+function showPage(p){activePage=p;document.querySelectorAll('.page').forEach(e=>e.classList.add('hidden'));$('page-'+p).classList.remove('hidden');document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===p));$('pageTitle').textContent=({dashboard:'Dashboard',orders:'Buy approvals',withdrawals:'Withdrawals',members:'Members & balances',chat:'Live chat inbox',settings:'Settings'})[p]||'Dashboard';refreshAll()}
+document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
+['buySearch','buyStatus','wdSearch','wdStatus','memberSearch'].forEach(id=>$(id).addEventListener('input',()=>{renderBuys();renderWithdrawals();renderMembers()}));
+$('modalCancel').onclick=()=>$('modalBack').classList.add('hidden');$('modalSave').onclick=()=>{try{if(modalAction)modalAction();$('modalBack').classList.add('hidden')}catch(e){alert(e.message)}};
+$('saveSettings').onclick=()=>{write('instantpay_admin_demo_settings',{bonus1000:Number($('bonus1000').value),bonus5000:Number($('bonus5000').value),bonus10000:Number($('bonus10000').value),bonus200000:Number($('bonus200000').value)});$('settingsNote').textContent=' Saved in this browser.'};
+$('exportBtn').onclick=()=>{let blob=new Blob([JSON.stringify({orders:allOrders(),members:members(),chats:read('instantpay_chats',[])},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='instantpay-demo-data.json';a.click();URL.revokeObjectURL(url)};
+$('loginBtn').onclick=()=>{const u=$('adminUser').value.trim(),p=$('adminPass').value;if(u!=='instantadmin'||p!=='IP@2026Demo!'){alert('Wrong demo admin ID or password.');return;}/* Demo-only browser check; not secure production authentication. */sessionStorage.setItem('ip-admin-demo','1');$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');refreshAll()};
+$('logoutBtn').onclick=()=>{sessionStorage.removeItem('ip-admin-demo');$('app').classList.add('hidden');$('loginScreen').classList.remove('hidden')};
+if(sessionStorage.getItem('ip-admin-demo')==='1'){$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden')}
+refreshAll();
+</script>
+</body></html>

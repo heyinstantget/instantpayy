@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>Instant Pay - Sell</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#12203a;--muted:#5b6a85;--line:#dde3ef;--brand:#0a5cff;--gold:#fbbf0e;--gold2:#e6a800;--red:#e53935}
+html{overflow-y:scroll;scrollbar-gutter:stable}
+
+body{overscroll-behavior-y:none}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Roboto,Arial,sans-serif;display:flex;justify-content:center}
+.app{width:100%;max-width:440px;min-height:100vh;min-height:100dvh;position:relative;padding-bottom:30px}
+.vh{position:sticky;top:0;z-index:10;flex:none;transform:translateZ(0);background:linear-gradient(180deg,#0f6bff,var(--brand));color:#fff;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:60px;padding:0 12px;font-weight:700;font-size:18px;letter-spacing:.2px;box-shadow:0 2px 10px rgba(10,92,255,.25)}
+.vh button{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.16);border:0;border-radius:50%;color:#fff;cursor:pointer;padding:0;transition:background .15s}
+.vh button:active{background:rgba(255,255,255,.3)}
+.vh button svg{width:20px;height:20px;display:block}
+.vh .bk{justify-self:start}.vh .t{text-align:center}
+.vh .acts{justify-self:end;display:flex;gap:8px}
+.sp svg{animation:sp .7s linear}@keyframes sp{to{transform:rotate(360deg)}}
+.ban{margin:14px;border-radius:14px;background:linear-gradient(120deg,#0b1b3a,#17345f);color:#fff;padding:24px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;overflow:hidden}
+.ban b{font-size:20px;display:block}.ban small{font-size:13px;color:#cfe0ff}
+.ban i{width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe27a,var(--gold) 55%,var(--gold2));display:flex;align-items:center;justify-content:center;font-style:normal;font-size:32px;font-weight:800;color:#6b4300;box-shadow:0 0 22px rgba(251,191,14,.6)}
+.bal{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;font-size:13px;color:var(--muted);padding:2px 10px}
+.bal b{display:block;color:var(--ink);font-size:16px;margin-top:3px}
+.coinw{display:flex;flex-direction:column;align-items:center;padding:26px 0 8px}
+.coin{width:190px;height:190px;border-radius:50%;border:0;cursor:pointer;position:relative;background:radial-gradient(circle at 35% 30%,#ffe27a,var(--gold) 55%,var(--gold2));box-shadow:0 0 0 14px rgba(251,191,14,.16),0 0 46px rgba(251,191,14,.55);color:#6b4300;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.coin::before{content:"";position:absolute;inset:12px;border-radius:50%;border:3px solid rgba(255,255,255,.45)}
+.coin .rs{position:absolute;font-size:110px;font-weight:800;color:rgba(255,255,255,.28);line-height:1}
+.coin b{font-size:30px;position:relative}.coin span{font-size:20px;font-weight:700;opacity:.8;position:relative}
+.hint{text-align:center;color:#9aa5bb;font-size:14px;margin:22px 0 14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 14px}
+.two a{display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px;font-weight:600;color:var(--ink);text-decoration:none;font-size:15px}
+.two svg{color:var(--muted)}
+h2{font-size:18px;margin:22px 14px 8px}
+#list{min-height:80px}
+.ord{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin:0 14px 10px;font-size:13px;color:var(--muted)}
+.ord b{color:var(--ink);font-size:16px}.ord .tg{float:right;color:#b26a00;font-weight:700}
+.empty{text-align:center;color:#9aa5bb;padding:24px 0;font-size:14px}
+.mask{position:fixed;inset:0;background:rgba(10,20,40,.55);display:none;z-index:40;justify-content:center;align-items:center}.mask.on{display:flex}
+.sheet{width:calc(100% - 28px);max-width:412px;max-height:88vh;overflow:auto;background:#fff;border-radius:18px;padding:18px 16px 18px;position:relative}
+.pop{background:linear-gradient(#dce9ff,#fff 90px)}
+.pop .cn2{position:absolute;right:16px;top:18px;font-size:20px;font-weight:800;letter-spacing:-.2px}.cn2 b{color:var(--brand)}.cn2 span{color:var(--ink)}
+.sheet h3{margin:0 0 14px;font-size:20px}
+.steps{list-style:none;margin:0 0 14px;padding:0 0 0 22px;border-left:2px solid #c9dcff}
+.steps li{position:relative;font-size:15px;line-height:1.5;margin:0 0 16px 10px}
+.steps li::before{content:"";position:absolute;left:-23px;top:5px;width:11px;height:11px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 4px #dbe8ff}
+.ck{display:flex;gap:10px;align-items:flex-start;font-size:14px;font-weight:600;margin:8px 0 14px;line-height:1.4}
+.ck input{width:20px;height:20px;accent-color:var(--brand);flex:none}
+.go{display:block;width:100%;padding:14px;font-size:17px;font-weight:700;color:#fff;background:linear-gradient(#2f80ff,#0838a8);border:0;border-radius:24px;cursor:pointer}.go:disabled{opacity:.45;cursor:not-allowed}
+.cn{display:block;width:100%;background:none;border:0;color:var(--muted);padding:12px;font-size:14px;cursor:pointer}
+.fin{width:100%;padding:12px;font-size:16px;border:1.5px solid var(--line);border-radius:10px;margin:6px 0}
+.nt{font-size:13px;min-height:18px;margin:4px 0 8px;color:#c62828}.nt.ok{color:#1b8a4b}
+.toast{position:fixed;left:50%;bottom:60px;transform:translateX(-50%);background:#12203a;color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:60;white-space:nowrap}.toast.on{opacity:1}
+
+/* ===== Full Sell screen (opens when coin is tapped) ===== */
+.sv{display:none;width:100%;max-width:440px;min-height:100vh;min-height:100dvh;background:#fff}
+.sv.on{display:block}
+body.selling .app{display:none}
+.sv .in{width:100%;min-height:inherit;background:#fff;padding-bottom:28px}
+.sv .top{text-align:center;padding:22px 14px 6px;color:var(--muted);font-size:14px}
+.sv .top b{display:block;color:var(--ink);font-size:32px;margin-top:6px}
+.sec{margin:18px 14px 0}
+.sec>label,.sec>.lb{display:block;font-size:14px;font-weight:700;margin-bottom:8px}
+.qty{display:flex;align-items:center;gap:10px;background:#f1f4fa;border-radius:12px;padding:6px 14px}
+.qty input{flex:1;min-width:0;border:0;background:none;font-size:max(16px,1em);font-weight:700;padding:12px 0;outline:none;color:var(--ink)}
+.qty input::placeholder{color:#a8b2c6;font-weight:600}
+.qty .u{font-weight:800;color:#4a5670}
+.qty .all{border:0;background:none;color:var(--gold2);font-weight:800;font-size:16px;cursor:pointer;padding:6px 2px}
+.pm{display:flex;align-items:center;gap:8px;background:#f1f4fa;border-radius:12px;padding:16px 14px;font-weight:700;font-size:15px}
+.pm .id{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pm .arr{margin-left:auto;color:#8a96ad;display:flex;align-items:center}.pm .arr svg{width:18px;height:18px;display:block}
+.bd{flex:none;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px}
+.bd.safe{background:var(--gold);color:#5a3b00}
+.bd.kyc{background:#fff;border:1px solid #f2a2a2;color:var(--red)}
+.bd.kyc.ok{border-color:#9ad3b3;color:#1b8a4b}
+.tips{margin:12px 14px 0;color:var(--red);font-size:14px;line-height:1.45}
+.plan{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:14px;cursor:pointer;background:#fafbfd}
+.plan .h{display:flex;align-items:center;gap:8px;padding:12px 14px;font-weight:700;font-size:16px;background:#e3e6ec}
+.plan .h svg{display:none}
+.plan .bd2{padding:12px 14px;font-size:14px;line-height:1.55}
+.plan .bd2 b{font-weight:700}
+.plan.sel{border-color:#f5c542;background:#fff8e1}
+.plan.sel .h{background:#ffd54a}
+.plan.sel .h svg{display:block}
+.note{margin:0 14px;color:var(--red);font-size:13px}
+.sum{margin:22px 14px 0;font-size:14px;color:var(--muted)}
+.sum div{display:flex;justify-content:space-between;margin-bottom:12px}
+.sum b{color:var(--ink)}
+.sellbtn{display:block;width:calc(100% - 28px);margin:20px 14px 0;padding:15px;font-size:16px;font-weight:700;border-radius:12px;border:1px solid var(--line);background:#f1f4fa;color:var(--ink);cursor:pointer}
+.sellbtn.act{background:linear-gradient(#2f80ff,#0838a8);color:#fff;border-color:transparent}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="vh">
+    <button type="button" class="bk" id="back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <span class="t">Sell</span>
+    <div class="acts"><button type="button" id="refresh" aria-label="Refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 10-2.3 6.1"/><path d="M20 4v7h-7"/></svg></button><button type="button" id="close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  </div>
+
+  <div class="ban" id="ban"><div><b>Instant Pay Selling Rules</b><small>please read the rules</small></div><i>₹</i></div>
+
+  <div class="bal">
+    <div>Available Balance<b id="b1">₹0.00</b></div>
+    <div>Sell Balance<b id="b2">₹0.00</b></div>
+    <div>In Progress<b id="b3">₹0.00</b></div>
+  </div>
+
+  <div class="coinw">
+    <button type="button" class="coin" id="coin"><span class="rs">₹</span><b>Sell</b><span id="cnt">0/10</span></button>
+    <div class="hint">sell orders can exist simultaneously</div>
+  </div>
+
+  <div class="two">
+    <a href="instant-pay-my.html#coll"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 11h18M7 15h3"/></svg>Collection</a>
+    <a href="https://t.me/instantpayar" target="_blank" rel="noopener"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0116 0v2"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></svg>Customer Service</a>
+  </div>
+
+  <h2>In Progress</h2>
+  <div id="list"></div>
+</div>
+
+<!-- Selling Instructions popup (shown first) -->
+<div class="mask on" id="pop"><div class="sheet pop">
+  <div class="cn2"><b>Instant</b><span>Pay</span></div>
+  <h3>Selling Instructions</h3>
+  <ul class="steps">
+    <li>You must complete KYC and add your collection UPI before you can sell.</li>
+    <li>PhonePe and Paytm may disconnect your account because you are logged in with other accounts.</li>
+    <li>If KYC is disconnected: <b>NO.1</b> Please be sure to return, reconnect and tap "Continue to Sell".<br><br><b>NO.2</b> You can also tap "Confirm Receipt" to complete the order, but you must confirm that the transfer has been received, otherwise you will be 100% scammed.</li>
+  </ul>
+  <label class="ck"><input type="checkbox" id="ck"> I have fully understood the above important information</label>
+  <button type="button" class="go" id="go" disabled>Confirm</button>
+  <button type="button" class="cn" id="cn">Cancel</button>
+</div></div>
+
+<!-- FULL SELL SCREEN (opens on coin tap) -->
+<div class="sv" id="sv"><div class="in">
+  <div class="vh">
+    <button type="button" class="bk" id="svBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <span class="t">Sell</span>
+    <div class="acts"><button type="button" id="svRef" aria-label="Refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 10-2.3 6.1"/><path d="M20 4v7h-7"/></svg></button><button type="button" id="svClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  </div>
+
+  <div class="top">My Available Balance<b id="svAv">₹0.00</b></div>
+
+  <div class="sec">
+    <label for="amt">Sell Amount</label>
+    <div class="qty">
+      <input id="amt" type="number" inputmode="decimal" min="50" max="200000" placeholder="Please enter the amount">
+      <span class="u">₹</span>
+      <button type="button" class="all" id="all">All</button>
+    </div>
+    <div style="font-size:13px;color:var(--muted);margin-top:6px">Minimum ₹50 · Maximum ₹2,00,000</div>
+  </div>
+
+  <div class="sec">
+    <div class="lb">Payment Method</div>
+    <div class="pm" id="pm">
+      <span class="id" id="pmId">-</span>
+      <span class="bd safe">Safe</span>
+      <span class="bd kyc" id="pmKyc">KYC Disconnect</span>
+      <span class="arr" id="pmArr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+    </div>
+    <div id="lockNote" style="display:none;font-size:13px;color:var(--muted);margin-top:8px">UPI is locked. To change it, contact <a href="https://t.me/instantpayar" target="_blank" rel="noopener" style="color:var(--brand);font-weight:700">Customer Service</a>.</div>
+  </div>
+
+  <div class="tips">Important tips: Please link UPI ID with alphanumeric characters, don't use your phone number as your UPI ID to avoid being a scammer target.</div>
+
+  <div class="sec">
+    <div class="lb">Order splitting method</div>
+    <div class="plan" id="pFast" data-p="fast">
+      <div class="h"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1b8a4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>Recommended: Fast payment plan</div>
+      <div class="bd2">Estimated data<br>Number of transactions received: <b>1 ~ 2</b><br>Selling time: <b>5 ~ 10</b> minutes</div>
+    </div>
+    <div class="plan sel" id="pProfit" data-p="profit">
+      <div class="h"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1b8a4b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>Profit maximization plan</div>
+      <div class="bd2">Estimated data<br>Number of transactions received: <b>5 ~ 8</b><br>Selling time: <b>10 ~ 15</b> minutes</div>
+    </div>
+  </div>
+
+  <div class="note">Note: All estimated data is subject to actual results.</div>
+
+  <div class="sum">
+    <div><span>Sell Amount</span><b id="sQty">₹0.00</b></div>
+    <div><span>Order Amount</span><b id="sAmt">₹0.00</b></div>
+  </div>
+  <div class="nt" id="nt" style="margin:0 14px"></div>
+  <button type="button" class="sellbtn" id="sellBtn">Sell</button>
+</div></div>
+
+<!-- Payment password -->
+<div class="mask" id="am"><div class="sheet">
+  <h3>Payment password</h3>
+  <div style="font-size:14px;color:var(--muted)">Selling <b id="pwAmt" style="color:var(--ink)"></b></div>
+  <input class="fin" id="pw" type="password" inputmode="numeric" maxlength="6" placeholder="Payment password (6 digits)">
+  <div class="nt" id="pnt"></div>
+  <button type="button" class="go" id="ok">Confirm Sell</button>
+  <button type="button" class="cn" id="no">Cancel</button>
+</div></div>
+<div class="toast" id="ts"></div>
+
+<script>
+const $ = id => document.getElementById(id), HOME = 'instant-pay-home.html';
+const ld = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch(e) { return d; } };
+const U = ld('instantpay_user', {});
+const inr = n => '₹' + Number(n || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function hashPw(p){ try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode((U.uid||'')+':'+p)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join(''); } catch(e) { let h = 0; for (const c of (U.uid||'')+':'+p) h = (h*31 + c.charCodeAt(0)) | 0; return 'f' + h; } }
+function toast(t){ const e = $('ts'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 2000); }
+const memberMatches = o => (String(o.memberUid||'') && String(o.memberUid)===String(U.uid||'')) || (String(o.memberMobile||'') && String(o.memberMobile)===String(U.mobile||''));
+const sells = () => ld('instantpay_orders', []).filter(o => o.type === 'sell' && memberMatches(o));
+let plan = 'profit';
+const MIN = 50, MAX = 200000, MAXMIN = 180;
+
+function left(end){ const m = Math.ceil((end - Date.now()) / 60000); return m > 0 ? m + ' min' : 'Time is up'; }
+function render(){
+  const savedUser = ld('instantpay_user', U);
+  if (savedUser && typeof savedUser === 'object') Object.assign(U, savedUser);
+  const s = sells(), p = s.filter(o => o.status === 'pending'), d = s.filter(o => o.status === 'completed');
+  $('b1').textContent = inr(U.balance);
+  $('b2').textContent = inr(d.reduce((x, o) => x + Number(o.amount||0), 0));
+  $('b3').textContent = inr(p.reduce((x, o) => x + Number(o.amount||0), 0));
+  $('cnt').textContent = p.length + '/10';
+  $('list').innerHTML = p.length ? p.map(o => '<div class="ord"><span class="tg">Selling</span><b>' + inr(o.amount) + '</b><br>Order ' + esc(o.no) + '<br>' + esc(o.time) + (o.end ? '<br>Time left: <b>' + left(o.end) + '</b>' : '') + (o.plan ? '<br>' + (o.plan === 'fast' ? 'Fast payment plan' : 'Profit maximization plan') : '') + '</div>').join('') : '<div class="empty">No sell orders in progress.</div>';
+}
+
+// popup first -> sell page after Confirm
+$('ck').onchange = () => $('go').disabled = !$('ck').checked;
+$('go').onclick = () => $('pop').classList.remove('on');
+$('cn').onclick = () => location.href = HOME;
+
+$('ban').onclick = () => location.href = HOME + '#sellrules';
+$('back').onclick = $('close').onclick = () => location.href = HOME;
+$('refresh').onclick = () => { $('refresh').classList.add('sp'); setTimeout(() => $('refresh').classList.remove('sp'), 700); render(); };
+
+/* ---- open full Sell screen ---- */
+function sumUpdate(){
+  const a = +$('amt').value || 0;
+  $('sQty').textContent = $('sAmt').textContent = inr(a);
+  $('sellBtn').classList.toggle('act', a > 0);
+}
+function openSell(){
+  // UPI is bind-once in this page: once saved, the payment method remains locked.
+  $('svAv').textContent = inr(U.balance);
+  $('pmId').textContent = U.upi || (U.upiLocked ? 'UPI locked — contact support' : 'Bind your UPI ID');
+  $('pmArr').innerHTML = (U.upi || U.upiLocked) ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
+  $('lockNote').style.display = (U.upi || U.upiLocked) ? 'block' : 'none';
+  document.querySelectorAll('#pm .bd').forEach(e => e.style.display = (U.upi || U.upiLocked) ? '' : 'none');
+  const k = $('pmKyc'), ok = !!U.kyc;
+  k.textContent = ok ? 'KYC Connected' : 'KYC Disconnect';
+  k.classList.toggle('ok', ok);
+  $('amt').value = ''; $('nt').textContent = '';
+  plan = 'profit'; setPlan();
+  sumUpdate();
+  document.body.classList.add('selling'); $('sv').classList.add('on'); window.scrollTo(0, 0);
+}
+function closeSell(){ $('sv').classList.remove('on'); document.body.classList.remove('selling'); window.scrollTo(0, 0); }
+function setPlan(){
+  $('pFast').classList.toggle('sel', plan === 'fast');
+  $('pProfit').classList.toggle('sel', plan === 'profit');
+}
+
+$('coin').onclick = openSell;
+$('svBack').onclick = $('svClose').onclick = closeSell;
+$('svRef').onclick = () => { $('svRef').classList.add('sp'); setTimeout(() => $('svRef').classList.remove('sp'), 700); $('svAv').textContent = inr(U.balance); };
+$('amt').oninput = sumUpdate;
+$('all').onclick = () => { $('amt').value = Math.min(Number(U.balance || 0), MAX) || ''; sumUpdate(); };
+$('pFast').onclick = () => { plan = 'fast'; setPlan(); };
+$('pProfit').onclick = () => { plan = 'profit'; setPlan(); };
+$('pm').onclick = () => {
+  if (U.upi || U.upiLocked) {
+    toast('UPI already bound and cannot be changed');
+    $('lockNote').scrollIntoView({block:'center'});
+    return;
+  }
+  location.href = 'instant-pay-my.html#coll';
+};
+
+/* Sell button -> ask payment password */
+$('sellBtn').onclick = () => {
+  const a = +$('amt').value, n = $('nt'); n.className = 'nt';
+  if (!U.upi) return n.textContent = 'Bind your collection UPI first (tap Payment Method)';
+  if (!U.pp) return n.textContent = 'Set your payment password in My first';
+  if (sells().filter(o => o.status === 'pending').length >= 10) return n.textContent = 'Maximum 10 sell orders allowed';
+  if (!(a >= MIN)) return n.textContent = 'Minimum sell amount is ₹50';
+  if (a > MAX) return n.textContent = 'Maximum sell amount is ₹2,00,000';
+  if (a > Number(U.balance || 0)) return n.textContent = 'Amount is more than your available balance';
+  $('pwAmt').textContent = inr(a); $('pw').value = ''; $('pnt').textContent = '';
+  $('am').classList.add('on');
+};
+$('no').onclick = () => $('am').classList.remove('on');
+$('ok').onclick = async () => {
+  const a = +$('amt').value, n = $('pnt'); n.className = 'nt';
+  if (!(a >= MIN)) return n.textContent = 'Minimum sell amount is ₹50';
+  if (a > MAX) return n.textContent = 'Maximum sell amount is ₹2,00,000';
+  if (a > Number(U.balance || 0)) return n.textContent = 'Amount is more than your available balance';
+  if (await hashPw($('pw').value) !== U.pp) return n.textContent = 'Wrong payment password';
+  try {
+    const L = ld('instantpay_orders', []), d = new Date(), z = x => String(x).padStart(2, '0');
+    const order = {
+      type:'sell',
+      status:'pending',
+      amount:a,
+      utr:'',
+      plan:plan,
+      end:d.getTime()+MAXMIN*60000,
+      memberMobile: U.mobile || '',
+      memberUid: U.uid || '',
+      time: d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes())+':'+z(d.getSeconds()),
+      no:'MR'+d.getTime()
+    };
+    L.unshift(order);
+    localStorage.setItem('instantpay_orders', JSON.stringify(L));
+
+    // Reserve the amount immediately so a member cannot submit multiple orders
+    // against the same available balance. This is browser-only demo behavior.
+    U.balance = Math.max(0, Number(U.balance || 0) - a);
+    localStorage.setItem('instantpay_user', JSON.stringify(U));
+  } catch(e) {
+    n.textContent = 'Could not save the sell order. Please try again.';
+    return;
+  }
+  $('am').classList.remove('on');
+  closeSell();
+  render();
+  toast('Sell/withdrawal order created');
+};
+render();
+let _last = ''; setInterval(() => { const k = JSON.stringify(sells().map(o => o.no)) + Math.floor(Date.now() / 60000); if (k !== _last) { _last = k; render(); } }, 30000);
+</script>
+</body>
+</html>
