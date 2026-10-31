@@ -202,6 +202,8 @@ body.selling .app{display:none}
 </div></div>
 <div class="toast" id="ts"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
 <script>
 const $ = id => document.getElementById(id), HOME = 'instant-pay-home.html';
 const ld = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch(e) { return d; } };
@@ -299,26 +301,14 @@ $('ok').onclick = async () => {
   if (a > Number(U.balance || 0)) return n.textContent = 'Amount is more than your available balance';
   if (await hashPw($('pw').value) !== U.pp) return n.textContent = 'Wrong payment password';
   try {
-    const L = ld('instantpay_orders', []), d = new Date(), z = x => String(x).padStart(2, '0');
-    const order = {
-      type:'sell',
-      status:'pending',
-      amount:a,
-      utr:'',
-      plan:plan,
-      end:d.getTime()+MAXMIN*60000,
-      memberMobile: U.mobile || '',
-      memberUid: U.uid || '',
-      time: d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes())+':'+z(d.getSeconds()),
-      no:'MR'+d.getTime()
-    };
-    L.unshift(order);
-    localStorage.setItem('instantpay_orders', JSON.stringify(L));
-
-    // Reserve the amount immediately so a member cannot submit multiple orders
-    // against the same available balance. This is browser-only demo behavior.
-    U.balance = Math.max(0, Number(U.balance || 0) - a);
-    localStorage.setItem('instantpay_user', JSON.stringify(U));
+    const d = new Date(), z = x => String(x).padStart(2, '0');
+    const orderNo='MR'+d.getTime();
+    await InstantPayDB.createOrder({orderNo,type:'sell',amount:a});
+    const L = ld('instantpay_orders', []);
+    const order = {type:'sell',status:'pending',amount:a,utr:'',plan:plan,end:d.getTime()+MAXMIN*60000,memberMobile:U.mobile||'',memberUid:U.uid||'',time:d.toLocaleString('en-IN'),no:orderNo};
+    L.unshift(order); localStorage.setItem('instantpay_orders', JSON.stringify(L));
+    const freshProfile=await InstantPayDB.myProfile();
+    U.balance=Number(freshProfile?.balance||0); localStorage.setItem('instantpay_user',JSON.stringify(U));
   } catch(e) {
     n.textContent = 'Could not save the sell order. Please try again.';
     return;

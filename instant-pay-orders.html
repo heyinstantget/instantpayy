@@ -83,6 +83,8 @@ nav .scan img{width:100%;height:100%;display:block}
   <a href="instant-pay-home.html#my"><span class="i"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>My</a>
 </nav>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
 <script>
 // ===== LOCAL TRANSACTION HISTORY =====
 // This page reads the same browser storage used by the current front-end.
@@ -92,10 +94,10 @@ const readArray = key => { try { const v=JSON.parse(localStorage.getItem(key)||'
 const readObject = key => { try { return JSON.parse(localStorage.getItem(key)||'{}')||{}; } catch(e){ return {}; } };
 let orders = [];
 let rewards = [];
-function loadHistory(){
+async function loadHistory(){
   const user = readObject('instantpay_user');
   const matchesUser = o => ((o.memberUid && String(o.memberUid)===String(user.uid||'')) || (o.memberMobile && String(o.memberMobile)===String(user.mobile||'')));
-  orders = readArray('instantpay_orders').filter(matchesUser);
+  try { const dbOrders=await InstantPayDB.myOrders(); orders=dbOrders.map(o=>({id:o.id,no:o.order_no,type:o.order_type,amount:Number(o.amount),status:o.status,utr:o.utr,time:o.created_at,memberUid:o.member_id})); } catch(e) { orders=readArray('instantpay_orders').filter(matchesUser); }
   // Accept common reward-history keys without inventing any transactions.
   rewards = [
     ...readArray('instantpay_reward_history'),
@@ -173,7 +175,7 @@ $('tabs').addEventListener('click', e => {
   render();
 });
 $('fs').onchange = $('ft').onchange = render;
-$('refresh').onclick = () => { loadHistory(); render(); };
+$('refresh').onclick = async () => { await loadHistory(); render(); };
 $('close').onclick = () => { location.href = 'instant-pay-home.html'; };
 $('list').addEventListener('click', e => {
   const b = e.target.closest('.cp'); if (!b) return;
@@ -182,7 +184,7 @@ $('list').addEventListener('click', e => {
 });
 loadHistory();
 render();
-window.addEventListener('storage', e => { if(e.key==='instantpay_orders'||e.key==='instantpay_user'||(e.key||'').includes('reward')) { loadHistory(); render(); } });
+window.addEventListener('storage', e => { if(e.key==='instantpay_orders'||e.key==='instantpay_user'||(e.key||'').includes('reward')) { loadHistory().then(render); } });
 </script>
 </body>
 </html>

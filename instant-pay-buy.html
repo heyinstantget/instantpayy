@@ -247,6 +247,8 @@ body.checkout-open>.app{display:none}
   </div>
 </section>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
 <script>
 // ===== SETTINGS =====
 const HOME = 'instant-pay-home.html';
@@ -601,7 +603,7 @@ $('pay-cancel').onclick = () => {
   $('pay-note').textContent = 'Checkout cancelled on this page. If you already sent money, contact your bank or payment provider.';
 };
 $('utr-input').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 12); });
-$('pay-submit').onclick = () => {
+$('pay-submit').onclick = async () => {
   const utr = $('utr-input').value;
   if (Date.now() >= paymentDeadline) return;
   if (!/^\d{12}$/.test(utr)) {
@@ -616,17 +618,15 @@ $('pay-submit').onclick = () => {
   activeOrder.utr = utr;
   activeOrder.reference = utr;
   activeOrder.status = 'pending';
-  const orders = (() => { try { const v = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } })();
-  if (orders.some(o => String(o.no || o.orderNo || o.id) === String(activeOrder.id))) {
-    $('pay-note').textContent = 'This order has already been submitted.';
-    return;
-  }
-  orders.unshift(activeOrder);
+  $('pay-submit').disabled = true;
   try {
-    localStorage.setItem(PENDING_KEY, JSON.stringify(orders));
+    await InstantPayDB.createOrder({orderNo:activeOrder.no,type:'buy',amount:activeOrder.amount,utr});
+    activeOrder.status='pending';
+    const orders = (() => { try { const v = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } })();
+    orders.unshift(activeOrder); localStorage.setItem(PENDING_KEY, JSON.stringify(orders));
   } catch (err) {
-    $('pay-note').textContent = 'Could not save order in this browser. Please try again.';
-    return;
+    $('pay-note').textContent = err.message || 'Could not submit order. Please log in again.';
+    $('pay-submit').disabled = false; return;
   }
   $('utr-input').disabled = true;
   $('pay-submit').disabled = true;

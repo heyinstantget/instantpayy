@@ -36,7 +36,8 @@ main{min-width:0;padding:28px clamp(14px,3vw,36px) 50px}.top{display:flex;justif
   <small>WORKSPACE</small>
   <div class="navs">
     <button class="nav active" data-page="dashboard"><span class="ico">▦</span>Dashboard</button>
-    <button class="nav" data-page="orders"><span class="ico">⇄</span>Buy approvals</button>
+    <button class="nav" data-page="orders"><span class="ico">⇄</span>Buy / Sell approvals</button>
+  <button class="nav" data-page="notifications"><span class="ico">♢</span>Notifications</button>
     <button class="nav" data-page="withdrawals"><span class="ico">↗</span>Withdrawals</button>
     <button class="nav" data-page="members"><span class="ico">♙</span>Members & balances</button>
     <button class="nav" data-page="chat"><span class="ico">☏</span>Live chat inbox</button>
@@ -57,6 +58,7 @@ main{min-width:0;padding:28px clamp(14px,3vw,36px) 50px}.top{display:flex;justif
     <div class="panel"><div class="panelhead"><h2>Recent transactions</h2><button class="btn ghost" onclick="refreshAll()">↻ Refresh</button></div><div class="tablewrap"><table><thead><tr><th>Member / Order</th><th>Type</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody id="recentRows"></tbody></table></div></div>
     <div class="grid2"><div class="panel"><div class="panelhead"><h2>Quick actions</h2></div><div class="actions"><button class="btn primary" onclick="showPage('orders')">Review buy orders</button><button class="btn ghost" onclick="showPage('withdrawals')">Check withdrawals</button><button class="btn ghost" onclick="showPage('chat')">Open live chat</button></div></div><div class="panel"><h2>Balance approval flow</h2><p class="notice">When a pending buy is approved, the demo adds the buy amount plus the bonus entered for that order to the matching member balance. Always verify payment evidence first.</p></div></div>
   </section>
+  <section id="page-notifications" class="page hidden"><div class="panel"><div class="panelhead"><h2>Member notifications</h2><button class="btn ghost" onclick="loadRemoteData().then(refreshAll)">↻ Refresh</button></div><div class="tablewrap"><table><thead><tr><th>Member</th><th>Title</th><th>Message</th><th>Time</th></tr></thead><tbody id="notificationRows"></tbody></table></div></div></section>
   <section id="page-orders" class="page hidden"><div class="panel"><div class="panelhead"><h2>Buy approvals</h2><div class="filters"><input id="buySearch" placeholder="Search member / order"><select id="buyStatus"><option value="pending">Pending</option><option value="all">All statuses</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></div></div><div class="tablewrap"><table><thead><tr><th>Member / Order</th><th>Payment evidence</th><th>Buy amount</th><th>Bonus ₹</th><th>Status</th><th>Action</th></tr></thead><tbody id="buyRows"></tbody></table></div></div></section>
   <section id="page-withdrawals" class="page hidden"><div class="panel"><div class="panelhead"><h2>Withdrawal confirmation</h2><div class="filters"><input id="wdSearch" placeholder="Search member / order"><select id="wdStatus"><option value="pending">Pending</option><option value="all">All statuses</option><option value="approved">Confirmed</option><option value="rejected">Rejected</option></select></div></div><div class="tablewrap"><table><thead><tr><th>Member / Order</th><th>Amount</th><th>Withdrawal method</th><th>Status</th><th>Action</th></tr></thead><tbody id="wdRows"></tbody></table></div></div></section>
   <section id="page-members" class="page hidden"><div class="panel"><div class="panelhead"><h2>Members & balances</h2><div class="filters"><input id="memberSearch" placeholder="Search name / mobile / UID"><button class="btn ghost" onclick="refreshAll()">↻ Refresh</button></div></div><div class="tablewrap"><table><thead><tr><th>Member</th><th>UID</th><th>Balance</th><th>Actions</th></tr></thead><tbody id="memberRows"></tbody></table></div><p class="notice">Balance adjustments here are for prototype testing only. Real balances must be updated transactionally on your server.</p></div></section>
@@ -68,8 +70,10 @@ main{min-width:0;padding:28px clamp(14px,3vw,36px) 50px}.top{display:flex;justif
 const $=id=>document.getElementById(id), money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2}), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const read=(k,d=[])=>{try{let v=JSON.parse(localStorage.getItem(k));return v??d}catch(e){return d}}, write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 let activePage='dashboard', activeChat='', modalAction=null;
-function allOrders(){return read('instantpay_orders',[])}
+let remoteOrders=[], remoteProfiles=[], remoteNotifications=[];
+function allOrders(){return remoteOrders;}
 function members(){
+ if(remoteProfiles.length) return remoteProfiles.map(p=>({id:p.id,uid:p.member_code,mobile:p.mobile,name:p.full_name,balance:p.balance}));
  let a=read('instantpay_users',[]), b=read('instantpay_members',[]);
  if(!Array.isArray(a))a=Object.values(a||{});if(!Array.isArray(b))b=Object.values(b||{});
  let list=[...a,...b];const u=read('instantpay_user',null);
@@ -82,22 +86,23 @@ function findMember(o){let ms=members(),key=memberKey(o);return ms.find(m=>Strin
 function saveMember(m){let key=String(m.uid||m.id||m.mobile||'');let cur=read('instantpay_user',null);if(cur&&String(cur.uid||cur.id||cur.mobile||'')===key)write('instantpay_user',m);
  for(const k of ['instantpay_users','instantpay_members']){let v=read(k,[]);if(Array.isArray(v)){let i=v.findIndex(x=>String(x.uid||x.id||x.mobile||'')===key);if(i>=0){v[i]=m;write(k,v)}}else if(v&&typeof v==='object'){for(const id of Object.keys(v))if(String(v[id].uid||v[id].id||v[id].mobile||id)===key){v[id]=m;write(k,v)}}}
 }
-function orderType(o){let t=String(o.type||o.kind||'').toLowerCase();if(t.includes('withdraw')||t==='sell')return 'withdraw';return 'buy'}
+function orderType(o){return String(o.order_type||o.type||o.kind||'').toLowerCase()}
 function status(o){return String(o.status||'pending').toLowerCase()}
 function badge(s){let cl=['approved','completed','success','confirmed'].includes(s)?'approved':['rejected','failed','cancelled'].includes(s)?'rejected':'pending';return `<span class="badge ${cl}">${esc(s)}</span>`}
-function labelOrder(o){return o.no||o.orderNo||o.id||'ORD-'+String(o.time||'').slice(-6)}
+function labelOrder(o){return o.order_no||o.no||o.orderNo||o.id||'ORD-'+String(o.time||'').slice(-6)}
 function tableEmpty(n,msg='No records found'){return `<tr><td colspan="${n}" class="empty">${msg}</td></tr>`}
 function refreshAll(){
- const orders=allOrders(),buys=orders.filter(o=>orderType(o)==='buy'),wds=orders.filter(o=>orderType(o)==='withdraw'),ms=members(),ch=read('instantpay_chats',[]);
+ const orders=allOrders(),buys=orders.filter(o=>['buy','sell'].includes(orderType(o))),wds=orders.filter(o=>orderType(o)==='withdraw'),ms=members(),ch=read('instantpay_chats',[]);
  $('pendingBuys').textContent=buys.filter(o=>status(o)==='pending').length;
  $('pendingWithdrawals').textContent=wds.filter(o=>status(o)==='pending').length;
  $('memberCount').textContent=ms.length;$('chatCount').textContent=Array.isArray(ch)?ch.filter(c=>!c.read).length:0;
- $('recentRows').innerHTML=orders.slice(0,8).map(o=>`<tr><td><div class="member">${esc(o.memberName||findMember(o)&&memberName(findMember(o))||memberKey(o)||'Unknown member')}</div><div class="tiny">${esc(labelOrder(o))}</div></td><td>${orderType(o)==='withdraw'?'Withdrawal':'Buy'}</td><td class="amount">${money(o.amount)}</td><td>${badge(status(o))}</td><td><button class="btn ghost" onclick="showPage('${orderType(o)==='withdraw'?'withdrawals':'orders'}')">Review</button></td></tr>`).join('')||tableEmpty(5,'No transactions stored in this browser');
- renderBuys();renderWithdrawals();renderMembers();renderChats();
+ $('recentRows').innerHTML=orders.slice(0,8).map(o=>`<tr><td><div class="member">${esc(o.memberName||findMember(o)&&memberName(findMember(o))||memberKey(o)||'Unknown member')}</div><div class="tiny">${esc(labelOrder(o))}</div></td><td>${orderType(o)==='withdraw'?'Withdrawal':orderType(o)==='sell'?'Sell':'Buy'}</td><td class="amount">${money(o.amount)}</td><td>${badge(status(o))}</td><td><button class="btn ghost" onclick="showPage('${orderType(o)==='withdraw'?'withdrawals':'orders'}')">Review</button></td></tr>`).join('')||tableEmpty(5,'No transactions stored in this browser');
+ renderBuys();renderWithdrawals();renderMembers();renderChats();renderNotifications();
 }
+function renderNotifications(){ $('notificationRows').innerHTML=remoteNotifications.map(n=>{const m=remoteProfiles.find(p=>p.id===n.member_id);return `<tr><td>${esc(m?.full_name||m?.mobile||n.member_id||'Member')}</td><td>${esc(n.title||'Notification')}</td><td>${esc(n.message||'')}</td><td>${esc(n.created_at||'')}</td></tr>`}).join('')||tableEmpty(4,'No notifications yet');}
 function renderBuys(){
  let q=($('buySearch').value||'').toLowerCase(),f=$('buyStatus').value;
- let a=allOrders().filter(o=>orderType(o)==='buy').filter(o=>f==='all'||(f==='approved'?['approved','completed','success'].includes(status(o)):status(o)===f)).filter(o=>([labelOrder(o),o.memberName,memberKey(o),o.mobile,o.utr,o.reference].join(' ').toLowerCase()).includes(q));
+ let a=allOrders().filter(o=>['buy','sell'].includes(orderType(o))).filter(o=>f==='all'||(f==='approved'?['approved','completed','success'].includes(status(o)):status(o)===f)).filter(o=>([labelOrder(o),o.memberName,memberKey(o),o.mobile,o.utr,o.reference].join(' ').toLowerCase()).includes(q));
  $('buyRows').innerHTML=a.map(o=>`<tr><td><div class="member">${esc(o.memberName||findMember(o)&&memberName(findMember(o))||memberKey(o)||'Unknown member')}</div><div class="tiny">${esc(labelOrder(o))} · ${esc(o.time||'')}</div></td><td>${esc(o.utr||o.txnId||o.reference||o.paymentProof||'Not supplied')}</td><td class="amount">${money(o.amount)}</td><td><input aria-label="Bonus amount" id="bonus-${esc(labelOrder(o))}" type="number" min="0" value="${Number(o.bonus ?? o.reward ?? 0)}" style="width:95px;padding:7px" ${status(o)!=='pending'?'disabled':''}></td><td>${badge(status(o))}</td><td><div class="actions">${status(o)==='pending'?`<button class="btn success" onclick="approveBuy('${esc(labelOrder(o))}')">Approve</button><button class="btn danger" onclick="rejectOrder('${esc(labelOrder(o))}')">Reject</button>`:'—'}</div></td></tr>`).join('')||tableEmpty(6);
 }
 function renderWithdrawals(){
@@ -105,38 +110,31 @@ function renderWithdrawals(){
  let a=allOrders().filter(o=>orderType(o)==='withdraw').filter(o=>f==='all'||(f==='approved'?['approved','completed','success','confirmed'].includes(status(o)):status(o)===f)).filter(o=>([labelOrder(o),o.memberName,memberKey(o),o.upi,o.bank,o.mobile].join(' ').toLowerCase()).includes(q));
  $('wdRows').innerHTML=a.map(o=>{const method=String(o.withdrawMethod||o.paymentMethod||o.method||'').toUpperCase();const upi=o.upi||o.upiId||o.vpa||'';const bank=o.bank||o.bankAccount||o.accountNumber||'';const dest=o.destination||'';const methodLabel=upi?`<div class="member">UPI</div><div class="tiny">${esc(upi)}</div>`:bank?`<div class="member">BANK</div><div class="tiny">${esc(bank)}</div>`:method?`<div class="member">${esc(method)}</div><div class="tiny">${esc(dest||'Details saved with request')}</div>`:`<div class="member">Not specified</div><div class="tiny">${esc(dest||'Check member details')}</div>`;return `<tr><td><div class="member">${esc(o.memberName||findMember(o)&&memberName(findMember(o))||memberKey(o)||'Unknown member')}</div><div class="tiny">${esc(labelOrder(o))} · ${esc(o.time||'')}</div></td><td class="amount">${money(o.amount)}</td><td>${methodLabel}</td><td>${badge(status(o))}</td><td>${status(o)==='pending'?`<div class="actions"><button class="btn success" onclick="confirmWithdrawal('${esc(labelOrder(o))}')">Confirm paid</button><button class="btn danger" onclick="rejectOrder('${esc(labelOrder(o))}')">Reject</button></div>`:'—'}</td></tr>`}).join('')||tableEmpty(5);
 }
-function approveBuy(no){
- const orders=allOrders(),o=orders.find(x=>labelOrder(x)===no);if(!o||status(o)!=='pending')return alert('Order not found or already processed.');
- const m=findMember(o);
- const bonusInput=$('bonus-'+CSS.escape(no));
- const savedBonus=Number(o.bonus ?? o.reward ?? 0);
- const rawBonus=bonusInput ? bonusInput.value : '';
- const bonus=rawBonus === '' ? savedBonus : Number(rawBonus);
+async function approveBuy(no){
+ const o=allOrders().find(x=>labelOrder(x)===no);if(!o||status(o)!=='pending')return alert('Order not found or already processed.');
+ const bonusInput=$('bonus-'+CSS.escape(no)); const bonus=bonusInput?Number(bonusInput.value):0;
  if(!Number.isFinite(bonus)||bonus<0)return alert('Enter a valid bonus amount.');
- const balanceMessage=m?`Member balance will increase by ${money(Number(o.amount||0)+bonus)} in this browser.`:'No matching member record was found, so only the order status will be updated; no balance will be changed.';
- if(!confirm(`Approve ${no} for ${money(o.amount)} + ${money(bonus)} bonus? ${balanceMessage}`))return;
- o.bonus=bonus;o.reward=bonus;o.creditedAmount=Number(o.amount||0)+bonus;
- o.status='approved';o.approvedAt=new Date().toISOString();o.approvedBy='admin-prototype';
- if(m){
-   const currentBalance=Number(m.balance||0);
-   m.balance=currentBalance+Number(o.amount||0)+bonus;
-   m.lastBuyCredit=Number(o.amount||0)+bonus;
-   m.lastBuyBonus=bonus;
-   m.lastBuyOrder=labelOrder(o);
-   saveMember(m);
- }
- write('instantpay_orders',orders);refreshAll();
- alert(m?'Demo order approved and local member balance updated.':'Order marked approved. Add/link the member record to update their balance.');
+ const what=orderType(o)==='sell'?'sell':'buy';
+ if(!confirm(`Approve ${what} ${no} for ${money(o.amount)}${what==='buy'?' + '+money(bonus)+' bonus':''}?`))return;
+ try{const {error}=await supabaseClient.rpc('admin_process_order',{p_order_id:o.id,p_action:'approve',p_bonus:what==='buy'?bonus:0});if(error)throw error;await loadRemoteData();refreshAll();alert('Request approved.');}catch(e){alert(e.message||'Approval failed.');}
 }
-function rejectOrder(no){
- const orders=allOrders(),o=orders.find(x=>labelOrder(x)===no);if(!o||status(o)!=='pending')return;
- if(!confirm('Reject this request? Check payment evidence first.'))return;
- o.status='rejected';o.rejectedAt=new Date().toISOString();write('instantpay_orders',orders);refreshAll();
+async function rejectOrder(no){
+ const o=allOrders().find(x=>labelOrder(x)===no);if(!o||status(o)!=='pending')return;
+ if(!confirm('Reject this request? Any reserved sell/withdraw balance will be refunded.'))return;
+ try{const {error}=await supabaseClient.rpc('admin_process_order',{p_order_id:o.id,p_action:'reject',p_bonus:0});if(error)throw error;await loadRemoteData();refreshAll();}catch(e){alert(e.message||'Reject failed.');}
 }
-function confirmWithdrawal(no){
- const orders=allOrders(),o=orders.find(x=>labelOrder(x)===no);if(!o||status(o)!=='pending')return;
+async function confirmWithdrawal(no){
+ const o=allOrders().find(x=>labelOrder(x)===no);if(!o||status(o)!=='pending')return;
  if(!confirm(`Confirm you have actually sent ${money(o.amount)} to the member? Only confirm after checking the bank/UPI transfer.`))return;
- o.status='completed';o.confirmedAt=new Date().toISOString();write('instantpay_orders',orders);refreshAll();
+ try{const {error}=await supabaseClient.rpc('admin_process_order',{p_order_id:o.id,p_action:'complete',p_bonus:0});if(error)throw error;await loadRemoteData();refreshAll();}catch(e){alert(e.message||'Confirmation failed.');}
+}
+async function loadRemoteData(){
+ const [{data:orders,error:oe},{data:profiles,error:pe},{data:notifs,error:ne}]=await Promise.all([
+  supabaseClient.from('orders').select('*'),
+  supabaseClient.from('profiles').select('id,full_name,mobile,member_code,balance'),
+  supabaseClient.from('notifications').select('*')
+ ]);
+ if(oe)throw oe;if(pe)throw pe;if(ne)throw ne;remoteOrders=(orders||[]).map(o=>({...o,no:o.order_no,type:o.order_type,memberUid:o.member_id,utr:o.utr}));remoteProfiles=profiles||[];remoteNotifications=notifs||[];
 }
 function renderMembers(){
  let q=($('memberSearch').value||'').toLowerCase(),ms=members().filter(m=>[memberName(m),m.uid,m.mobile,m.id].join(' ').toLowerCase().includes(q));
@@ -157,7 +155,7 @@ function openChat(id,rerender=true){
  if(rerender)renderChats();
 }
 $('sendReply').onclick=()=>{let text=$('chatReply').value.trim();if(!text||!activeChat)return;let chats=read('instantpay_chats',[]);if(!Array.isArray(chats))chats=[];let c=chats.find((x,i)=>String(x.id||i)===activeChat);if(!c)return alert('Conversation not found.');if(!Array.isArray(c.messages))c.messages=[];c.messages.push({from:'admin',text,time:new Date().toLocaleString()});write('instantpay_chats',chats);$('chatReply').value='';renderChats();openChat(activeChat,false)};
-function showPage(p){activePage=p;document.querySelectorAll('.page').forEach(e=>e.classList.add('hidden'));$('page-'+p).classList.remove('hidden');document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===p));$('pageTitle').textContent=({dashboard:'Dashboard',orders:'Buy approvals',withdrawals:'Withdrawals',members:'Members & balances',chat:'Live chat inbox',settings:'Settings'})[p]||'Dashboard';refreshAll()}
+function showPage(p){activePage=p;document.querySelectorAll('.page').forEach(e=>e.classList.add('hidden'));$('page-'+p).classList.remove('hidden');document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===p));$('pageTitle').textContent=({dashboard:'Dashboard',orders:'Buy / Sell approvals',notifications:'Notifications',withdrawals:'Withdrawals',members:'Members & balances',chat:'Live chat inbox',settings:'Settings'})[p]||'Dashboard';refreshAll()}
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 ['buySearch','buyStatus','wdSearch','wdStatus','memberSearch'].forEach(id=>$(id).addEventListener('input',()=>{renderBuys();renderWithdrawals();renderMembers()}));
 $('modalCancel').onclick=()=>$('modalBack').classList.add('hidden');$('modalSave').onclick=()=>{try{if(modalAction)modalAction();$('modalBack').classList.add('hidden')}catch(e){alert(e.message)}};
@@ -167,11 +165,10 @@ async function openAdminSession(){
  const {data:{session}}=await supabaseClient.auth.getSession(); if(!session)return;
  const {data:allowed,error}=await supabaseClient.rpc('is_admin');
  if(error||allowed!==true){await supabaseClient.auth.signOut();$('loginScreen').classList.remove('hidden');$('app').classList.add('hidden');return;}
- $('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');refreshAll();
+ $('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');try{await loadRemoteData();refreshAll();if(window._ipRealtime)window._ipRealtime.unsubscribe();window._ipRealtime=supabaseClient.channel('instantpay-admin-live').on('postgres_changes',{event:'*',schema:'public',table:'orders'},async()=>{try{await loadRemoteData();refreshAll()}catch(e){console.error(e)}}).subscribe();}catch(e){alert('Database load failed: '+e.message)}
 }
 $('loginBtn').onclick=async()=>{const email=$('adminUser').value.trim().toLowerCase(),password=$('adminPass').value;if(!email||!password)return alert('Enter admin email and password.');$('loginBtn').disabled=true;try{const {error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;await openAdminSession();if($('app').classList.contains('hidden'))alert('This account is not authorized as an admin.');}catch(e){alert(e.message||'Admin login failed.');}finally{$('loginBtn').disabled=false;}};
 $('logoutBtn').onclick=async()=>{await supabaseClient.auth.signOut();$('app').classList.add('hidden');$('loginScreen').classList.remove('hidden')};
 openAdminSession();
-refreshAll();
 </script>
 </body></html>
