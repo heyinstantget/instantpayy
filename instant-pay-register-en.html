@@ -132,8 +132,16 @@ $('invite').addEventListener('input', e => {
 toggle($('tg1'), $('pw'));
 toggle($('tg2'), $('cpw'));
 
+const DEVICE_COUNT_KEY = 'instantpay_device_registration_count_v1';
+const MAX_ACCOUNTS_PER_BROWSER = 3;
+function deviceRegistrationCount(){ return Math.max(0, Number(localStorage.getItem(DEVICE_COUNT_KEY) || 0)); }
+
 $('f').addEventListener('submit', async e => {
   e.preventDefault();
+  if (deviceRegistrationCount() >= MAX_ACCOUNTS_PER_BROWSER) {
+    $('tErr').textContent = 'Is device/browser par 3 accounts pehle hi register ho chuke hain. Ab aur registration nahi ho sakta.';
+    return;
+  }
   let bad = false;
   const m = $('mobile').value, p = $('pw').value, c = $('cpw').value;
   $('mErr').textContent = /^[6-9]\d{9}$/.test(m) ? '' : (bad = true, 'Enter a valid 10-digit mobile number.');
@@ -148,7 +156,12 @@ $('f').addEventListener('submit', async e => {
     // Email confirmation must be disabled in Supabase Auth settings for this flow.
     const email = m + '@members.instantpay.in';
     const {data,error}=await supabaseClient.auth.signUp({email,password:p,options:{data:{mobile:m,full_name:'Member',invite_code:$('invite').value||null}}});
-    if(error) throw error;
+    if(error) {
+      const msg = String(error.message || '');
+      if (/already registered|already exists|duplicate|unique/i.test(msg)) throw new Error('Yeh mobile number pehle se registered hai. Is number se dobara account nahi ban sakta.');
+      throw error;
+    }
+    if (data.user) localStorage.setItem(DEVICE_COUNT_KEY, String(deviceRegistrationCount() + 1));
     if(data.session){
       const {data:profile,error:pe}=await supabaseClient.from('profiles').select('*').eq('id',data.user.id).maybeSingle();
       if(pe) throw pe;
@@ -161,7 +174,7 @@ $('f').addEventListener('submit', async e => {
       $('formBox').style.display='none'; $('ok').style.display='block';
       setTimeout(()=>location.href='instant-pay-home.html',1200);
     } else {
-      $('tErr').textContent='Account created. Supabase email confirmation is ON. Turn it OFF in Supabase Authentication settings, then members can log in using mobile and password.';
+      $('tErr').textContent='Account ban gaya hai, lekin Supabase email confirmation ON hai. Authentication settings mein email confirmation OFF karna hoga; tab mobile aur password se login hoga.';
     }
   } catch(err) {
     $('tErr').textContent=err.message||'Registration failed. Please try again.';
