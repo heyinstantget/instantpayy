@@ -238,8 +238,8 @@ body.checkout-open>.app{display:none}
     <div class="pay-amount" id="pay-amount"></div>
     <div class="pay-expiry">Time remaining: <span id="pay-timer">15:00</span></div>
     <div id="pay-destination"></div>
-    <label class="utr-label" for="utr-input">12-digit UTR / transaction reference (if applicable)</label>
-    <input class="utr-input" id="utr-input" type="text" inputmode="numeric" autocomplete="off" maxlength="12" pattern="[0-9]{12}" placeholder="Enter 12-digit UTR">
+    <label class="utr-label" for="utr-input">UTR / Transaction reference</label>
+    <input class="utr-input" id="utr-input" type="text" inputmode="text" autocomplete="off" maxlength="35" placeholder="Enter your actual payment reference (6–35 characters)">
     <div class="pay-note" id="pay-note" aria-live="polite"></div>
     <button class="sb go" id="pay-submit" type="button">Submit Payment Reference</button>
     <button class="sb no" id="pay-cancel" type="button">Cancel Payment</button>
@@ -602,41 +602,69 @@ $('pay-cancel').onclick = () => {
   closePayment();
   $('pay-note').textContent = 'Checkout cancelled on this page. If you already sent money, contact your bank or payment provider.';
 };
-$('utr-input').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 12); });
-$('pay-submit').onclick = async () => {
-  const utr = $('utr-input').value;
-  if (Date.now() >= paymentDeadline) return;
-  if (!/^\d{12}$/.test(utr)) {
-    $('pay-note').textContent = 'Enter exactly 12 digits.';
+$('utr-input').addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 35).toUpperCase();
+});
+$('pay-submit').addEventListener('click', async () => {
+  const utr = $('utr-input').value.trim();
+  const note = $('pay-note');
+  note.style.color = '#b54708';
+  if (!paymentDeadline || Date.now() >= paymentDeadline) {
+    note.textContent = 'Checkout expired. Please start a new order.';
+    return;
+  }
+  if (!/^[A-Z0-9]{6,35}$/.test(utr)) {
+    note.textContent = 'Enter the actual UTR/reference (6–35 letters or numbers).';
     $('utr-input').focus();
     return;
   }
   if (!activeOrder) {
-    $('pay-note').textContent = 'Order details not found. Please start a new order.';
+    note.textContent = 'Order details not found. Please start a new order.';
     return;
   }
-  activeOrder.utr = utr;
-  activeOrder.reference = utr;
-  activeOrder.status = 'pending';
-  $('pay-submit').disabled = true;
-  try {
-    await InstantPayDB.createOrder({orderNo:activeOrder.no,type:'buy',amount:activeOrder.amount,utr});
-    activeOrder.status='pending';
-    const orders = (() => { try { const v = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } })();
-    orders.unshift(activeOrder); localStorage.setItem(PENDING_KEY, JSON.stringify(orders));
-  } catch (err) {
-    $('pay-note').textContent = err.message || 'Could not submit order. Please log in again.';
-    $('pay-submit').disabled = false; return;
+  if (!window.InstantPayDB || typeof window.InstantPayDB.createOrder !== 'function') {
+    note.textContent = 'Supabase connection file did not load. Refresh this page and try again.';
+    return;
   }
-  $('utr-input').disabled = true;
   $('pay-submit').disabled = true;
-  clearInterval(paymentTimer);
-  document.body.classList.remove('checkout-open');
-  $('payment-page').style.display = 'none';
-  $('grab').style.display = '';
-  renderPendingOrders();
-  window.scrollTo({top:0, behavior:'smooth'});
-};
+  $('pay-submit').textContent = 'Submitting…';
+  note.textContent = 'Submitting your request securely…';
+  try {
+    const result = await window.InstantPayDB.createOrder({
+      orderNo: activeOrder.no, type: 'buy', amount: activeOrder.amount, utr
+    });
+    activeOrder.utr = utr;
+    activeOrder.reference = utr;
+    activeOrder.status = 'pending';
+    activeOrder.supabaseId = result;
+    const orders = (() => {
+      try {
+        const v = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
+        return Array.isArray(v) ? v : [];
+      } catch (_) { return []; }
+    })();
+    orders.unshift(activeOrder);
+    localStorage.setItem(PENDING_KEY, JSON.stringify(orders));
+    $('utr-input').disabled = true;
+    $('pay-submit').textContent = 'Submitted';
+    note.style.color = '#16803d';
+    note.textContent = 'Request submitted. Waiting for admin verification.';
+    clearInterval(paymentTimer);
+    setTimeout(() => {
+      document.body.classList.remove('checkout-open');
+      $('payment-page').style.display = 'none';
+      $('grab').style.display = '';
+      renderPendingOrders();
+      window.scrollTo({top:0, behavior:'smooth'});
+    }, 900);
+  } catch (err) {
+    console.error('Instant Pay order submission failed:', err);
+    note.style.color = '#c62828';
+    note.textContent = (err && err.message) ? err.message : 'Could not submit. Check your login and try again.';
+    $('pay-submit').disabled = false;
+    $('pay-submit').textContent = 'Submit Payment Reference';
+  }
+});
 $('back').onclick = () => { location.href = HOME; };
 $('close').onclick = () => { location.href = HOME; };
 
