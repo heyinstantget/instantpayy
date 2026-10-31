@@ -1,22 +1,19 @@
-
-// Instant Pay Supabase Configuration
+// Instant Pay Supabase client + shared database helpers
+// Load Supabase JS v2 CDN before this file.
 var InstantPayDB;
-
 (function () {
   'use strict';
 
   if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-    console.error('Supabase JS library did not load.');
-
+    console.error('Supabase JS library did not load. Check internet/CDN access and script order.');
     InstantPayDB = window.InstantPayDB = {
       ready: false,
-      error: 'Supabase library did not load.'
+      error: 'Supabase library did not load. Refresh the page and check internet access.'
     };
     return;
   }
 
   var SUPABASE_URL = 'https://unsqcyjkiqhantwozbbc.supabase.co';
-
   var SUPABASE_ANON_KEY = 'sb_publishable_SrHHt-FNLQhpCmcuGAkQpA_IS6ou_2J';
 
   var supabaseClient = window.supabase.createClient(
@@ -37,49 +34,41 @@ var InstantPayDB;
     },
 
     async createOrder(args) {
-      await this.user();
-
+      var user = await this.user();
       var result = await supabaseClient.rpc('member_create_order', {
         p_order_no: String(args.orderNo),
         p_order_type: String(args.type),
         p_amount: Number(args.amount),
         p_utr: args.utr == null ? null : String(args.utr)
       });
-
       if (result.error) throw result.error;
       return result.data;
     },
 
     async myOrders() {
       var user = await this.user();
-
       var result = await supabaseClient
         .from('orders')
         .select('*')
         .eq('member_id', user.id)
         .order('created_at', { ascending: false });
-
       if (result.error) throw result.error;
       return result.data || [];
     },
 
     async myProfile() {
       var user = await this.user();
-
       var result = await supabaseClient
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
-
       if (result.error) throw result.error;
       return result.data;
     }
   };
 
   InstantPayDB = window.InstantPayDB = db;
-
   window.dispatchEvent(new Event('instantpaydb:ready'));
-
   console.info('Instant Pay Supabase helpers loaded.');
 })();
