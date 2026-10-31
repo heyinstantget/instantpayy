@@ -38,6 +38,8 @@ button.submit:hover{background:var(--brand2)}
 .foot{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
 .foot a{color:var(--brand)}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
 </head>
 <body>
 <header>
@@ -48,8 +50,12 @@ button.submit:hover{background:var(--brand2)}
   <div class="card">
     <div id="formBox">
       <h2>Create your account</h2>
-      <p class="sub">Enter your mobile number and set a password to register.</p>
+      <p class="sub">Enter your email, mobile number and set a password to register.</p>
       <form id="f" novalidate>
+        <label for="email">Email Address</label>
+        <input id="email" type="email" autocomplete="email" placeholder="Enter your email" required>
+        <div class="msg" id="emailErr"></div>
+
         <label for="mobile">Mobile Number</label>
         <div class="field">
           <span class="prefix">+91</span>
@@ -130,35 +136,26 @@ $('invite').addEventListener('input', e => {
 toggle($('tg1'), $('pw'));
 toggle($('tg2'), $('cpw'));
 
-$('f').addEventListener('submit', e => {
+$('f').addEventListener('submit', async e => {
   e.preventDefault();
-  let bad = false;
-  const m = $('mobile').value, p = $('pw').value, c = $('cpw').value;
-
-  $('mErr').textContent = /^[6-9]\d{9}$/.test(m) ? '' : (bad = true, 'Enter a valid 10-digit mobile number.');
-  $('pErr').textContent = p.length >= 6 ? '' : (bad = true, 'Password must be at least 6 characters.');
-  $('cErr').textContent = (c && c === p) ? '' : (bad = true, 'Passwords do not match.');
-  $('tErr').textContent = $('tc').checked ? '' : (bad = true, 'Please accept the Terms & Conditions to continue.');
-
-  if (bad) return;
-
-  // Browser-only demo storage. Replace with a secure server API for production.
-  (async()=>{
-    const accounts = (()=>{try{return JSON.parse(localStorage.getItem('instantpay_accounts'))||{}}catch(e){return {}}})();
-    if(accounts[m]) { $('mErr').textContent='An account with this mobile number already exists.'; return; }
-    const uid='IP'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,6).toUpperCase();
-    const createdAt=Date.now();
-    // Registration reward is recorded separately; starting wallet and sell balances remain zero.
-    const registrationReward=Math.floor(Math.random()*(110-68+1))+68;
-    const profile={name:'Member',uid,mobile:m,level:'LV0',verified:false,balance:0,sellBalance:0,registrationReward,registrationRewardClaimed:true,wallet:'',createdAt,registeredAt:createdAt};
-    accounts[m]={hash:await hashPw(m,p),inviteCode:$('invite').value,createdAt:Date.now(),profile};
-    localStorage.setItem('instantpay_accounts',JSON.stringify(accounts));
-    localStorage.setItem('instantpay_user',JSON.stringify(profile));
-    localStorage.setItem('instantpay_session',JSON.stringify({mobile:m,t:Date.now()}));
-    $('formBox').style.display = 'none';
-  $('ok').style.display = 'block';
-    setTimeout(() => { location.href = 'instant-pay-home.html'; }, 1500);
-  })().catch(()=>{ $('tErr').textContent='Could not save this demo account in this browser.'; });
+  const email=$('email').value.trim().toLowerCase(), m=$('mobile').value, p=$('pw').value, c=$('cpw').value;
+  let bad=false;
+  $('emailErr').textContent=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)?'':(bad=true,'Enter a valid email address.');
+  $('mErr').textContent=/^[6-9]\d{9}$/.test(m)?'':(bad=true,'Enter a valid 10-digit mobile number.');
+  $('pErr').textContent=p.length>=6?'':(bad=true,'Password must be at least 6 characters.');
+  $('cErr').textContent=(c&&c===p)?'':(bad=true,'Passwords do not match.');
+  $('tErr').textContent=$('tc').checked?'':(bad=true,'Please accept the Terms & Conditions to continue.');
+  if(bad)return;
+  const btn=$('f').querySelector('button[type=submit]'); btn.disabled=true;
+  try {
+    const {data,error}=await supabaseClient.auth.signUp({email,password:p,options:{data:{full_name:'Member',mobile:m,invite_code:$('invite').value}}});
+    if(error) throw error;
+    if(data.user){
+      // Profile row is created by the database auth trigger. Do not write wallet balance from the browser.
+      $('formBox').style.display='none'; $('ok').style.display='block';
+      $('ok').innerHTML='<strong>Registration submitted!</strong>Please check your email to confirm your account, then log in.';
+    }
+  } catch(err) { $('emailErr').textContent=err.message||'Registration failed.'; btn.disabled=false; }
 });
 </script>
 </body>

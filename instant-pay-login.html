@@ -40,6 +40,8 @@ button.submit:disabled{opacity:.55;cursor:not-allowed}
 .foot{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
 .foot a{color:var(--brand)}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
 </head>
 <body>
 <header>
@@ -51,12 +53,11 @@ button.submit:disabled{opacity:.55;cursor:not-allowed}
     <div id="formBox">
       <div class="banner" id="bn"></div>
       <h2>Welcome back</h2>
-      <p class="sub">Login with your mobile number and password.</p>
+      <p class="sub">Login with your email and password.</p>
       <form id="f" novalidate>
-        <label for="mobile">Mobile Number</label>
+        <label for="mobile">Email Address</label>
         <div class="field">
-          <span class="prefix">+91</span>
-          <input class="p" id="mobile" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel-national">
+          <input id="mobile" type="email" placeholder="Enter your email" autocomplete="email">
         </div>
         <div class="msg" id="mErr"></div>
 
@@ -87,7 +88,7 @@ const $ = id => document.getElementById(id);
 const HOME = 'instant-pay-home.html';
 const ldj = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch(e) { return d; } };
 
-$('mobile').addEventListener('input', e => e.target.value = e.target.value.replace(/\D/g, ''));
+
 $('tg').onclick = () => {
   const show = $('pw').type === 'password';
   $('pw').type = show ? 'text' : 'password';
@@ -111,7 +112,7 @@ async function hashPw(m, p){
     $('bn').textContent = 'You have been logged out.'; $('bn').classList.add('on');
     return;
   }
-  if (ldj('instantpay_session', null)) location.replace(HOME);
+  supabaseClient.auth.getSession().then(({data})=>{ if(data.session) location.replace(HOME); });
 })();
 
 // too many wrong tries -> wait 60 seconds
@@ -126,48 +127,17 @@ function lockUI(){
 lockUI();
 
 $('f').addEventListener('submit', async e => {
-  e.preventDefault();
-  if (lockLeft() > 0) return lockUI();
-  const m = $('mobile').value, p = $('pw').value;
-  let bad = false;
-  $('mErr').textContent = /^[6-9]\d{9}$/.test(m) ? '' : (bad = true, 'Enter a valid 10-digit mobile number.');
-  $('pErr').textContent = p ? '' : (bad = true, 'Enter your password.');
-  if (bad) return;
-
-  // Demo check against accounts saved in this browser by the register page.
-  // TODO: replace with your backend / API login call. Data to send: { mobile: m, password: p }
-  const acc = ldj('instantpay_accounts', {});
-  const ok = acc[m] && acc[m].hash === await hashPw(m, p);
-  if (!ok) {
-    const n = (ldj('instantpay_fails', 0) || 0) + 1;
-    try {
-      if (n >= 5) { localStorage.setItem('instantpay_lock', String(Date.now() + 60000)); localStorage.setItem('instantpay_fails', '0'); }
-      else localStorage.setItem('instantpay_fails', String(n));
-    } catch(err) {}
-    if (n >= 5) return lockUI();
-    $('pErr').textContent = 'Incorrect mobile number or password.';
-    return;
-  }
-
+  e.preventDefault(); const email=$('mobile').value.trim().toLowerCase(), p=$('pw').value;
+  $('mErr').textContent=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)?'':'Enter a valid email address.';
+  $('pErr').textContent=p?'':'Enter your password.'; if($('mErr').textContent||$('pErr').textContent)return;
+  $('go').disabled=true;
   try {
-    localStorage.setItem('instantpay_fails', '0');
+    const {data,error}=await supabaseClient.auth.signInWithPassword({email,password:p}); if(error)throw error;
+    const {data:profile}=await supabaseClient.from('profiles').select('*').eq('id',data.user.id).maybeSingle();
     localStorage.removeItem('instantpay_logged_out');
-    localStorage.setItem('instantpay_session', JSON.stringify({ mobile: m, t: Date.now() }));
-    const accountsNow = ldj('instantpay_accounts', {});
-    const account = accountsNow[m] || {};
-    let profile = account.profile;
-    if (!profile || profile.mobile !== m) {
-      profile = {name:'Member',uid:'IP'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,6).toUpperCase(),mobile:m,level:'LV0',verified:false,balance:0,sellBalance:0,wallet:'',createdAt:account.createdAt||Date.now()};
-      account.profile = profile;
-      accountsNow[m] = account;
-      localStorage.setItem('instantpay_accounts', JSON.stringify(accountsNow));
-    }
-    localStorage.setItem('instantpay_user', JSON.stringify(profile));
-  } catch(err) {}
-
-  $('formBox').style.display = 'none';
-  $('ok').style.display = 'block';
-  setTimeout(() => { location.href = HOME; }, 900);
+    localStorage.setItem('instantpay_user',JSON.stringify({id:data.user.id,uid:profile?.member_code||'',name:profile?.full_name||'Member',mobile:profile?.mobile||'',balance:Number(profile?.balance||0)}));
+    $('formBox').style.display='none'; $('ok').style.display='block'; setTimeout(()=>location.href=HOME,700);
+  } catch(err) { $('pErr').textContent=err.message||'Login failed.'; $('go').disabled=false; }
 });
 </script>
 </body>

@@ -20,14 +20,15 @@ main{min-width:0;padding:28px clamp(14px,3vw,36px) 50px}.top{display:flex;justif
 @media(max-width:1000px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:1fr}}
 @media(max-width:700px){.layout{grid-template-columns:1fr}.side{position:relative;height:auto;padding:12px}.brand{padding:0 8px 10px}.side small,.sidefoot{display:none}.navs{display:flex;overflow:auto;gap:4px}.nav{white-space:nowrap;width:auto;padding:10px;font-size:12px}.top h1{font-size:23px}.adminpill{font-size:11px}.stats{gap:8px}.stat{padding:13px}.statnum{font-size:21px}.chatbox{grid-template-columns:110px 1fr}.thread{padding:10px 7px;font-size:11px}.panel{padding:13px}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
 </head>
 <body>
 <div id="loginScreen" class="login">
   <div class="logo">₹</div><h1>Admin sign in</h1><p>Instant Pay control panel</p>
-  <label for="adminUser">Admin username</label><input id="adminUser" autocomplete="username" placeholder="Admin username">
+  <label for="adminUser">Admin email</label><input id="adminUser" type="email" autocomplete="username" placeholder="Admin email">
   <label for="adminPass">Admin password</label><input id="adminPass" type="password" autocomplete="current-password" placeholder="Admin password">
-  <button class="btn primary" id="loginBtn">Open dashboard</button>\n  <p style="margin-top:12px;padding:10px;border-radius:10px;background:#f2f6ff;color:#253c72"><b>Demo ID:</b> instantadmin<br><b>Demo password:</b> IP@2026Demo!</p>
-  <p class="notice">Prototype only: configure real server-side authentication before deploying publicly.</p>
+  <button class="btn primary" id="loginBtn">Open dashboard</button>\n  <p class="notice">Sign in with the authorized Supabase admin account.</p>
 </div>
 <div id="app" class="layout hidden">
 <aside class="side">
@@ -162,9 +163,15 @@ document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>showPage(b.dataset.pa
 $('modalCancel').onclick=()=>$('modalBack').classList.add('hidden');$('modalSave').onclick=()=>{try{if(modalAction)modalAction();$('modalBack').classList.add('hidden')}catch(e){alert(e.message)}};
 $('saveSettings').onclick=()=>{write('instantpay_admin_demo_settings',{bonus1000:Number($('bonus1000').value),bonus5000:Number($('bonus5000').value),bonus10000:Number($('bonus10000').value),bonus200000:Number($('bonus200000').value)});$('settingsNote').textContent=' Saved in this browser.'};
 $('exportBtn').onclick=()=>{let blob=new Blob([JSON.stringify({orders:allOrders(),members:members(),chats:read('instantpay_chats',[])},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='instantpay-demo-data.json';a.click();URL.revokeObjectURL(url)};
-$('loginBtn').onclick=()=>{const u=$('adminUser').value.trim(),p=$('adminPass').value;if(u!=='instantadmin'||p!=='IP@2026Demo!'){alert('Wrong demo admin ID or password.');return;}/* Demo-only browser check; not secure production authentication. */sessionStorage.setItem('ip-admin-demo','1');$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');refreshAll()};
-$('logoutBtn').onclick=()=>{sessionStorage.removeItem('ip-admin-demo');$('app').classList.add('hidden');$('loginScreen').classList.remove('hidden')};
-if(sessionStorage.getItem('ip-admin-demo')==='1'){$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden')}
+async function openAdminSession(){
+ const {data:{session}}=await supabaseClient.auth.getSession(); if(!session)return;
+ const {data:allowed,error}=await supabaseClient.rpc('is_admin');
+ if(error||allowed!==true){await supabaseClient.auth.signOut();$('loginScreen').classList.remove('hidden');$('app').classList.add('hidden');return;}
+ $('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');refreshAll();
+}
+$('loginBtn').onclick=async()=>{const email=$('adminUser').value.trim().toLowerCase(),password=$('adminPass').value;if(!email||!password)return alert('Enter admin email and password.');$('loginBtn').disabled=true;try{const {error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;await openAdminSession();if($('app').classList.contains('hidden'))alert('This account is not authorized as an admin.');}catch(e){alert(e.message||'Admin login failed.');}finally{$('loginBtn').disabled=false;}};
+$('logoutBtn').onclick=async()=>{await supabaseClient.auth.signOut();$('app').classList.add('hidden');$('loginScreen').classList.remove('hidden')};
+openAdminSession();
 refreshAll();
 </script>
 </body></html>
