@@ -53,11 +53,12 @@ button.submit:disabled{opacity:.55;cursor:not-allowed}
     <div id="formBox">
       <div class="banner" id="bn"></div>
       <h2>Welcome back</h2>
-      <p class="sub">Login with your email and password.</p>
+      <p class="sub">Login with your mobile number and password.</p>
       <form id="f" novalidate>
-        <label for="mobile">Email Address</label>
+        <label for="mobile">Mobile Number</label>
         <div class="field">
-          <input id="mobile" type="email" placeholder="Enter your email" autocomplete="email">
+          <span class="prefix">+91</span>
+          <input class="p" id="mobile" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel-national">
         </div>
         <div class="msg" id="mErr"></div>
 
@@ -88,7 +89,7 @@ const $ = id => document.getElementById(id);
 const HOME = 'instant-pay-home.html';
 const ldj = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch(e) { return d; } };
 
-
+$('mobile').addEventListener('input', e => e.target.value = e.target.value.replace(/\D/g, ''));
 $('tg').onclick = () => {
   const show = $('pw').type === 'password';
   $('pw').type = show ? 'text' : 'password';
@@ -105,15 +106,8 @@ async function hashPw(m, p){
   }
 }
 
-// came here from Logout -> stay on login and show a message; already logged in -> go home
-(function(){
-  const q = new URLSearchParams(location.search);
-  if (q.get('logout') === '1' || localStorage.getItem('instantpay_logged_out') === '1') {
-    $('bn').textContent = 'You have been logged out.'; $('bn').classList.add('on');
-    return;
-  }
-  supabaseClient.auth.getSession().then(({data})=>{ if(data.session) location.replace(HOME); });
-})();
+// Show logout notice. Supabase Auth is the source of truth for member sessions.
+(function(){ const q=new URLSearchParams(location.search); if(q.get('logout')==='1'||localStorage.getItem('instantpay_logged_out')==='1'){ $('bn').textContent='You have been logged out.'; $('bn').classList.add('on'); } })();
 
 // too many wrong tries -> wait 60 seconds
 const lockLeft = () => Math.max(0, Math.ceil((ldj('instantpay_lock', 0) - Date.now()) / 1000));
@@ -127,17 +121,31 @@ function lockUI(){
 lockUI();
 
 $('f').addEventListener('submit', async e => {
-  e.preventDefault(); const email=$('mobile').value.trim().toLowerCase(), p=$('pw').value;
-  $('mErr').textContent=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)?'':'Enter a valid email address.';
-  $('pErr').textContent=p?'':'Enter your password.'; if($('mErr').textContent||$('pErr').textContent)return;
-  $('go').disabled=true;
-  try {
-    const {data,error}=await supabaseClient.auth.signInWithPassword({email,password:p}); if(error)throw error;
-    const {data:profile}=await supabaseClient.from('profiles').select('*').eq('id',data.user.id).maybeSingle();
-    localStorage.removeItem('instantpay_logged_out');
-    localStorage.setItem('instantpay_user',JSON.stringify({id:data.user.id,uid:profile?.member_code||'',name:profile?.full_name||'Member',mobile:profile?.mobile||'',balance:Number(profile?.balance||0)}));
-    $('formBox').style.display='none'; $('ok').style.display='block'; setTimeout(()=>location.href=HOME,700);
-  } catch(err) { $('pErr').textContent=err.message||'Login failed.'; $('go').disabled=false; }
+  e.preventDefault();
+  if (lockLeft() > 0) return lockUI();
+  const m=$('mobile').value,p=$('pw').value;
+  let bad=false;
+  $('mErr').textContent=/^[6-9]\d{9}$/.test(m)?'':(bad=true,'Enter a valid 10-digit mobile number.');
+  $('pErr').textContent=p.length>=6?'':(bad=true,'Enter a valid password.');
+  if(bad)return;
+  if(!window.supabaseClient){$('pErr').textContent='Database is not connected. Refresh and try again.';return;}
+  $('go').disabled=true; $('go').textContent='Logging in...';
+  try{
+    const email=m+'@members.instantpay.in';
+    const {data,error}=await supabaseClient.auth.signInWithPassword({email,password:p});
+    if(error)throw error;
+    const user=data.user;
+    const {data:profile,error:pe}=await supabaseClient.from('profiles').select('*').eq('id',user.id).maybeSingle();
+    if(pe)throw pe;
+    if(!profile)throw new Error('Member profile not found. Please contact admin.');
+    const local={name:profile.full_name||'Member',uid:profile.member_code||user.id,mobile:profile.mobile||m,level:'LV0',verified:false,balance:Number(profile.balance||0),registrationReward:Number(profile.registration_bonus||0),registrationRewardClaimed:true,wallet:'',createdAt:Date.now()};
+    localStorage.setItem('instantpay_user',JSON.stringify(local));
+    localStorage.setItem('instantpay_session',JSON.stringify({mobile:m,t:Date.now()}));
+    localStorage.removeItem('instantpay_logged_out'); localStorage.setItem('instantpay_fails','0');
+    $('formBox').style.display='none'; $('ok').style.display='block';
+    setTimeout(()=>location.href=HOME,700);
+  }catch(err){$('pErr').textContent=err.message||'Login failed. Check mobile and password.';}
+  finally{$('go').disabled=false;$('go').textContent='Login';}
 });
 </script>
 </body>

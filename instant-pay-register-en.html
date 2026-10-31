@@ -50,12 +50,8 @@ button.submit:hover{background:var(--brand2)}
   <div class="card">
     <div id="formBox">
       <h2>Create your account</h2>
-      <p class="sub">Enter your email, mobile number and set a password to register.</p>
+      <p class="sub">Enter your mobile number and set a password to register.</p>
       <form id="f" novalidate>
-        <label for="email">Email Address</label>
-        <input id="email" type="email" autocomplete="email" placeholder="Enter your email" required>
-        <div class="msg" id="emailErr"></div>
-
         <label for="mobile">Mobile Number</label>
         <div class="field">
           <span class="prefix">+91</span>
@@ -138,24 +134,38 @@ toggle($('tg2'), $('cpw'));
 
 $('f').addEventListener('submit', async e => {
   e.preventDefault();
-  const email=$('email').value.trim().toLowerCase(), m=$('mobile').value, p=$('pw').value, c=$('cpw').value;
-  let bad=false;
-  $('emailErr').textContent=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)?'':(bad=true,'Enter a valid email address.');
-  $('mErr').textContent=/^[6-9]\d{9}$/.test(m)?'':(bad=true,'Enter a valid 10-digit mobile number.');
-  $('pErr').textContent=p.length>=6?'':(bad=true,'Password must be at least 6 characters.');
-  $('cErr').textContent=(c&&c===p)?'':(bad=true,'Passwords do not match.');
-  $('tErr').textContent=$('tc').checked?'':(bad=true,'Please accept the Terms & Conditions to continue.');
-  if(bad)return;
-  const btn=$('f').querySelector('button[type=submit]'); btn.disabled=true;
+  let bad = false;
+  const m = $('mobile').value, p = $('pw').value, c = $('cpw').value;
+  $('mErr').textContent = /^[6-9]\d{9}$/.test(m) ? '' : (bad = true, 'Enter a valid 10-digit mobile number.');
+  $('pErr').textContent = p.length >= 6 ? '' : (bad = true, 'Password must be at least 6 characters.');
+  $('cErr').textContent = (c && c === p) ? '' : (bad = true, 'Passwords do not match.');
+  $('tErr').textContent = $('tc').checked ? '' : (bad = true, 'Please accept the Terms & Conditions to continue.');
+  if (bad) return;
+  if (!window.supabaseClient) { $('tErr').textContent='Database is not connected. Please refresh and try again.'; return; }
+  const btn=$('f').querySelector('button[type="submit"]'); btn.disabled=true; btn.textContent='Creating account...';
   try {
-    const {data,error}=await supabaseClient.auth.signUp({email,password:p,options:{data:{full_name:'Member',mobile:m,invite_code:$('invite').value}}});
+    // A private synthetic email lets members keep the mobile-number login UI.
+    // Email confirmation must be disabled in Supabase Auth settings for this flow.
+    const email = m + '@members.instantpay.in';
+    const {data,error}=await supabaseClient.auth.signUp({email,password:p,options:{data:{mobile:m,full_name:'Member',invite_code:$('invite').value||null}}});
     if(error) throw error;
-    if(data.user){
-      // Profile row is created by the database auth trigger. Do not write wallet balance from the browser.
+    if(data.session){
+      const {data:profile,error:pe}=await supabaseClient.from('profiles').select('*').eq('id',data.user.id).maybeSingle();
+      if(pe) throw pe;
+      if(profile){
+        const local={name:profile.full_name||'Member',uid:profile.member_code||data.user.id,mobile:profile.mobile||m,level:'LV0',verified:false,balance:Number(profile.balance||0),registrationReward:Number(profile.registration_bonus||0),registrationRewardClaimed:true,wallet:'',createdAt:Date.now()};
+        localStorage.setItem('instantpay_user',JSON.stringify(local));
+        localStorage.setItem('instantpay_session',JSON.stringify({mobile:m,t:Date.now()}));
+      }
+      localStorage.removeItem('instantpay_logged_out');
       $('formBox').style.display='none'; $('ok').style.display='block';
-      $('ok').innerHTML='<strong>Registration submitted!</strong>Please check your email to confirm your account, then log in.';
+      setTimeout(()=>location.href='instant-pay-home.html',1200);
+    } else {
+      $('tErr').textContent='Account created. Supabase email confirmation is ON. Turn it OFF in Supabase Authentication settings, then members can log in using mobile and password.';
     }
-  } catch(err) { $('emailErr').textContent=err.message||'Registration failed.'; btn.disabled=false; }
+  } catch(err) {
+    $('tErr').textContent=err.message||'Registration failed. Please try again.';
+  } finally { btn.disabled=false; btn.textContent='Register'; }
 });
 </script>
 </body>

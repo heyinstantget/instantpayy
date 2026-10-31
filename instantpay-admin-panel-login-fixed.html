@@ -61,7 +61,7 @@ main{min-width:0;padding:28px clamp(14px,3vw,36px) 50px}.top{display:flex;justif
   <section id="page-notifications" class="page hidden"><div class="panel"><div class="panelhead"><h2>Member notifications</h2><button class="btn ghost" onclick="loadRemoteData().then(refreshAll)">↻ Refresh</button></div><div class="tablewrap"><table><thead><tr><th>Member</th><th>Title</th><th>Message</th><th>Time</th></tr></thead><tbody id="notificationRows"></tbody></table></div></div></section>
   <section id="page-orders" class="page hidden"><div class="panel"><div class="panelhead"><h2>Buy approvals</h2><div class="filters"><input id="buySearch" placeholder="Search member / order"><select id="buyStatus"><option value="pending">Pending</option><option value="all">All statuses</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></div></div><div class="tablewrap"><table><thead><tr><th>Member / Order</th><th>Payment evidence</th><th>Buy amount</th><th>Bonus ₹</th><th>Status</th><th>Action</th></tr></thead><tbody id="buyRows"></tbody></table></div></div></section>
   <section id="page-withdrawals" class="page hidden"><div class="panel"><div class="panelhead"><h2>Withdrawal confirmation</h2><div class="filters"><input id="wdSearch" placeholder="Search member / order"><select id="wdStatus"><option value="pending">Pending</option><option value="all">All statuses</option><option value="approved">Confirmed</option><option value="rejected">Rejected</option></select></div></div><div class="tablewrap"><table><thead><tr><th>Member / Order</th><th>Amount</th><th>Withdrawal method</th><th>Status</th><th>Action</th></tr></thead><tbody id="wdRows"></tbody></table></div></div></section>
-  <section id="page-members" class="page hidden"><div class="panel"><div class="panelhead"><h2>Members & balances</h2><div class="filters"><input id="memberSearch" placeholder="Search name / mobile / UID"><button class="btn ghost" onclick="refreshAll()">↻ Refresh</button></div></div><div class="tablewrap"><table><thead><tr><th>Member</th><th>UID</th><th>Balance</th><th>Actions</th></tr></thead><tbody id="memberRows"></tbody></table></div><p class="notice">Balance adjustments here are for prototype testing only. Real balances must be updated transactionally on your server.</p></div></section>
+  <section id="page-members" class="page hidden"><div class="panel"><div class="panelhead"><h2>Members & balances</h2><div class="filters"><input id="memberSearch" placeholder="Search name / mobile / UID"><button class="btn ghost" onclick="refreshAll()">↻ Refresh</button></div></div><div class="tablewrap"><table><thead><tr><th>Member</th><th>UID</th><th>Balance</th><th>Registration bonus</th><th>Actions</th></tr></thead><tbody id="memberRows"></tbody></table></div><p class="notice">Use Adjust balance to set a member’s real Supabase balance. Every change is recorded in the admin audit log.</p></div></section>
   <section id="page-chat" class="page hidden"><div class="panel"><div class="panelhead"><h2>Live chat inbox</h2><button class="btn ghost" onclick="refreshAll()">↻ Refresh</button></div><div class="chatbox"><div class="threads" id="threads"></div><div class="messages"><div id="chatMessages" class="notice">Select a conversation to read messages.</div><div class="reply"><input id="chatReply" placeholder="Write a reply…"><button id="sendReply" class="btn primary">Send</button></div></div></div><p class="notice">Only messages saved to the configured chat store appear here. A real live chat needs a shared database/realtime service.</p></div></section>
   <section id="page-settings" class="page hidden"><div class="panel"><h2>Mission bonus settings</h2><p class="notice">These values are local demo settings, not a secure production configuration.</p><div class="formrow"><div class="formgroup"><label>₹1,000 buy bonus</label><input id="bonus1000" type="number" value="50"></div><div class="formgroup"><label>₹5,000 buy bonus</label><input id="bonus5000" type="number" value="500"></div><div class="formgroup"><label>₹10,000 buy bonus</label><input id="bonus10000" type="number" value="1500"></div><div class="formgroup"><label>₹2,00,000 buy bonus</label><input id="bonus200000" type="number" value="35000"></div></div><button class="btn primary" id="saveSettings">Save demo settings</button><span id="settingsNote" class="notice"></span></div><div class="panel"><h2>Data keys detected</h2><p class="notice">Orders: <code>instantpay_orders</code> · Current member: <code>instantpay_user</code> · Other members: <code>instantpay_users</code> / <code>instantpay_members</code> · Chats: <code>instantpay_chats</code>.</p><button class="btn ghost" id="exportBtn">Export demo data JSON</button></div></section>
 </main></div>
@@ -73,7 +73,7 @@ let activePage='dashboard', activeChat='', modalAction=null;
 let remoteOrders=[], remoteProfiles=[], remoteNotifications=[];
 function allOrders(){return remoteOrders;}
 function members(){
- if(remoteProfiles.length) return remoteProfiles.map(p=>({id:p.id,uid:p.member_code,mobile:p.mobile,name:p.full_name,balance:p.balance}));
+ if(remoteProfiles.length) return remoteProfiles.map(p=>({id:p.id,uid:p.member_code,mobile:p.mobile,name:p.full_name,balance:p.balance,registration_bonus:p.registration_bonus}));
  let a=read('instantpay_users',[]), b=read('instantpay_members',[]);
  if(!Array.isArray(a))a=Object.values(a||{});if(!Array.isArray(b))b=Object.values(b||{});
  let list=[...a,...b];const u=read('instantpay_user',null);
@@ -131,18 +131,27 @@ async function confirmWithdrawal(no){
 async function loadRemoteData(){
  const [{data:orders,error:oe},{data:profiles,error:pe},{data:notifs,error:ne}]=await Promise.all([
   supabaseClient.from('orders').select('*'),
-  supabaseClient.from('profiles').select('id,full_name,mobile,member_code,balance'),
+  supabaseClient.from('profiles').select('id,full_name,mobile,member_code,balance,registration_bonus'),
   supabaseClient.from('notifications').select('*')
  ]);
  if(oe)throw oe;if(pe)throw pe;if(ne)throw ne;remoteOrders=(orders||[]).map(o=>({...o,no:o.order_no,type:o.order_type,memberUid:o.member_id,utr:o.utr}));remoteProfiles=profiles||[];remoteNotifications=notifs||[];
 }
 function renderMembers(){
  let q=($('memberSearch').value||'').toLowerCase(),ms=members().filter(m=>[memberName(m),m.uid,m.mobile,m.id].join(' ').toLowerCase().includes(q));
- $('memberRows').innerHTML=ms.map((m,i)=>`<tr><td><div class="member">${esc(memberName(m))}</div><div class="tiny">${esc(m.mobile||'No mobile')}</div></td><td>${esc(m.uid||m.id||'—')}</td><td class="amount">${money(m.balance)}</td><td><button class="btn ghost" onclick="editMember(${i})">Adjust balance</button></td></tr>`).join('')||tableEmpty(4,'No members found. Check the users storage schema.');
+ $('memberRows').innerHTML=ms.map((m,i)=>`<tr><td><div class="member">${esc(memberName(m))}</div><div class="tiny">${esc(m.mobile||'No mobile')}</div></td><td>${esc(m.uid||m.id||'—')}</td><td class="amount">${money(m.balance)}</td><td>${money(m.registration_bonus||0)}</td><td><button class="btn ghost" onclick="editMember(${i})">Adjust balance</button></td></tr>`).join('')||tableEmpty(5,'No members found.');
 }
 function editMember(i){
- const ms=members(),m=ms[i];if(!m)return;modalAction=()=>{const amount=Number($('editBalance').value);if(!Number.isFinite(amount)||amount<0)throw Error('Enter a valid non-negative balance.');m.balance=amount;saveMember(m);refreshAll();};
- $('modalTitle').textContent='Adjust member balance';$('modalBody').innerHTML=`<p><b>${esc(memberName(m))}</b> · ${esc(m.uid||m.mobile||'')}</p><div class="formgroup"><label>New balance (₹)</label><input id="editBalance" type="number" min="0" step="0.01" value="${Number(m.balance||0)}"></div><p class="notice">For demo testing only. Keep an audit log and server-side permissions in production.</p>`;$('modalBack').classList.remove('hidden');
+ const ms=members(),m=ms[i];if(!m)return;
+ modalAction=async()=>{
+  const amount=Number($('editBalance').value),reason=$('editReason').value.trim();
+  if(!Number.isFinite(amount)||amount<0)throw Error('Enter a valid non-negative balance.');
+  const {error}=await supabaseClient.rpc('admin_set_member_balance',{p_member_id:m.id,p_new_balance:amount,p_reason:reason||null});
+  if(error)throw error;
+  await loadRemoteData();refreshAll();alert('Member balance updated successfully.');
+ };
+ $('modalTitle').textContent='Adjust member balance';
+ $('modalBody').innerHTML=`<p><b>${esc(memberName(m))}</b> · ${esc(m.uid||m.mobile||'')}</p><div class="formgroup"><label>New total balance (₹)</label><input id="editBalance" type="number" min="0" step="0.01" value="${Number(m.balance||0)}"></div><div class="formgroup"><label>Reason (optional)</label><input id="editReason" type="text" maxlength="200" placeholder="e.g. Manual correction"></div><p class="notice">This updates the real Supabase balance and records the change.</p>`;
+ $('modalBack').classList.remove('hidden');
 }
 function renderChats(){
  let chats=read('instantpay_chats',[]);if(!Array.isArray(chats))chats=[];
@@ -158,7 +167,7 @@ $('sendReply').onclick=()=>{let text=$('chatReply').value.trim();if(!text||!acti
 function showPage(p){activePage=p;document.querySelectorAll('.page').forEach(e=>e.classList.add('hidden'));$('page-'+p).classList.remove('hidden');document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===p));$('pageTitle').textContent=({dashboard:'Dashboard',orders:'Buy / Sell approvals',notifications:'Notifications',withdrawals:'Withdrawals',members:'Members & balances',chat:'Live chat inbox',settings:'Settings'})[p]||'Dashboard';refreshAll()}
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 ['buySearch','buyStatus','wdSearch','wdStatus','memberSearch'].forEach(id=>$(id).addEventListener('input',()=>{renderBuys();renderWithdrawals();renderMembers()}));
-$('modalCancel').onclick=()=>$('modalBack').classList.add('hidden');$('modalSave').onclick=()=>{try{if(modalAction)modalAction();$('modalBack').classList.add('hidden')}catch(e){alert(e.message)}};
+$('modalCancel').onclick=()=>$('modalBack').classList.add('hidden');$('modalSave').onclick=async()=>{const b=$('modalSave');b.disabled=true;try{if(modalAction)await modalAction();$('modalBack').classList.add('hidden')}catch(e){alert(e.message||'Could not update balance.')}finally{b.disabled=false}};
 $('saveSettings').onclick=()=>{write('instantpay_admin_demo_settings',{bonus1000:Number($('bonus1000').value),bonus5000:Number($('bonus5000').value),bonus10000:Number($('bonus10000').value),bonus200000:Number($('bonus200000').value)});$('settingsNote').textContent=' Saved in this browser.'};
 $('exportBtn').onclick=()=>{let blob=new Blob([JSON.stringify({orders:allOrders(),members:members(),chats:read('instantpay_chats',[])},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='instantpay-demo-data.json';a.click();URL.revokeObjectURL(url)};
 async function openAdminSession(){
