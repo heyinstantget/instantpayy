@@ -650,11 +650,13 @@ $('pay-submit').addEventListener('click', async () => {
     note.style.color = '#16803d';
     note.textContent = 'Request submitted. Waiting for admin verification.';
     clearInterval(paymentTimer);
-    // After a successful submission, return the member to the Buy page.
-    // The order is already saved in Supabase before this redirect occurs.
     setTimeout(() => {
-      window.location.href = 'instant-pay-buy.html';
-    }, 1200);
+      document.body.classList.remove('checkout-open');
+      $('payment-page').style.display = 'none';
+      $('grab').style.display = '';
+      renderPendingOrders();
+      window.scrollTo({top:0, behavior:'smooth'});
+    }, 900);
   } catch (err) {
     console.error('Instant Pay order submission failed:', err);
     note.style.color = '#c62828';
