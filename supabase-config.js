@@ -1,20 +1,23 @@
-// Supabase JS v2 CDN is required before this file.
+
+// Instant Pay Supabase Configuration
 var InstantPayDB;
 
 (function () {
   'use strict';
 
   if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-    console.error('Supabase JS library is not loaded.');
+    console.error('Supabase JS library did not load.');
+
     InstantPayDB = window.InstantPayDB = {
       ready: false,
-      error: 'Supabase JS library is not loaded.'
+      error: 'Supabase library did not load.'
     };
     return;
   }
 
   var SUPABASE_URL = 'https://unsqcyjkiqhantwozbbc.supabase.co';
-  var SUPABASE_ANON_KEY = 'sb_publishable_-cI6OnKdngJFj9dMZluZi_A_VYRSCl33';
+
+  var SUPABASE_ANON_KEY = 'sb_publishable_SrHHt-FNLQhpCmcuGAkQpA_IS6ou_2J';
 
   var supabaseClient = window.supabase.createClient(
     SUPABASE_URL,
@@ -29,12 +32,12 @@ var InstantPayDB;
     async user() {
       var result = await supabaseClient.auth.getUser();
       if (result.error) throw result.error;
+      if (!result.data.user) throw new Error('Please log in first.');
       return result.data.user;
     },
 
     async createOrder(args) {
-      var user = await this.user();
-      if (!user) throw new Error('Please login first.');
+      await this.user();
 
       var result = await supabaseClient.rpc('member_create_order', {
         p_order_no: String(args.orderNo),
@@ -49,27 +52,25 @@ var InstantPayDB;
 
     async myOrders() {
       var user = await this.user();
-      if (!user) throw new Error('Please login first.');
 
       var result = await supabaseClient
         .from('orders')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('member_id', user.id)
         .order('created_at', { ascending: false });
 
       if (result.error) throw result.error;
-      return result.data;
+      return result.data || [];
     },
 
     async myProfile() {
       var user = await this.user();
-      if (!user) throw new Error('Please login first.');
 
       var result = await supabaseClient
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (result.error) throw result.error;
       return result.data;
@@ -77,5 +78,8 @@ var InstantPayDB;
   };
 
   InstantPayDB = window.InstantPayDB = db;
+
   window.dispatchEvent(new Event('instantpaydb:ready'));
+
+  console.info('Instant Pay Supabase helpers loaded.');
 })();
